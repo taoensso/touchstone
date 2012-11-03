@@ -4,10 +4,10 @@ Current [semantic](http://semver.org/) version:
 [com.taoensso/touchstone "0.5.0"]
 ```
 
-# Touchstone, an A/B testing library for Clojure
+# Touchstone, an split-testing library for Clojure
 
 ## What's In The Box?
- * {SOMETHING}.
+ * {TODO}.
 
 ## Status
 
@@ -32,7 +32,7 @@ and `require` the library:
 (ns my-app (:require [taoensso.touchstone :as touchstone]))
 ```
 
-### {SOMETHING}
+### {TODO}
 
 ## Touchstone supports the ClojureWerkz Project Goals
 
