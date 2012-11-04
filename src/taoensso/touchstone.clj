@@ -30,13 +30,13 @@
 
 (defmacro with-test-subject
   "Executes body (e.g. handling of a Ring web request) within the context of a
-  thread-local binding for test-subject id. Ids allow us to present a consistent
-  user experience to each test subject for some reasonable duration.
+  thread-local binding for test-subject id. Ids are used to make selected
+  testing forms \"sticky\", presenting a consistent user experience to each
+  test subject during a particular testing session (+/- 2hrs).
 
-  Suitable ids include: user account id, session key, etc. When nil/unspecified,
-  subject will not participate in split-testing (useful for staff/bot web
-  requests, etc.)."
-  [id & body] `(binding [*mab-subject-id* ~id] ~@body))
+  When nil/unspecified, subject will not participate in split-testing (useful
+  for staff/bot web requests, etc.)."
+  [id & body] `(binding [*mab-subject-id* (str ~id)] ~@body))
 
 ;;;;
 

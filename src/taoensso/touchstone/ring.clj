@@ -7,10 +7,9 @@
 (defn wrap-random-test-subject-id
   "Wraps Ring handler to randomly generate, sessionize, and bind a test-subject
   id for request. Request's User-Agent header will be checked, and bots excluded
-  from split-testing by having their id set to nil.
-
-  Use custom middleware for more sophisticated bot testing, exclusion of staff
-  requests, etc."
+  from split-testing by having their id set to nil. Manually sessionize a nil
+  :mab-subject-id to exclude staff or bots detected via more sophisticated
+  methods."
   [handler]
   (fn [request]
     (if (contains? (:session request) :mab-subject-id)
@@ -24,8 +23,6 @@
             #"(agent|bing|bot|crawl|curl|facebook|google|index|slurp|spider|teoma|wget)"
 
             new-id (when-not (re-find known-bots-regex user-agent)
-                     (str (java.util.UUID/randomUUID))) ; nil for bots
+                     (str (rand-int 2147483647))) ; nil for bots
             response (touchstone/with-test-subject new-id (handler request))]
         (assoc-in response [:session :mab-subject-id] new-id)))))
-
-
