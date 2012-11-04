@@ -1,8 +1,9 @@
-(defproject touchstone "0.5.0"
-  :description "Simple, Redis-backed A/B testing for Clojure."
+(defproject touchstone "0.5.0-SNAPSHOT"
+  :description "Simple, Redis-backed split-testing for Clojure."
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"}
-  :dependencies [[org.clojure/clojure "1.3.0"]]
+  :dependencies [[org.clojure/clojure  "1.3.0"]
+                 [com.taoensso/carmine "0.11.4"]]
   :profiles {:1.3   {:dependencies [[org.clojure/clojure "1.3.0"]]}
              :1.4   {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5   {:dependencies [[org.clojure/clojure "1.5.0-alpha3"]]}
