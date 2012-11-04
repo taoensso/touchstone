@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.5.0"]
+[com.taoensso/touchstone "0.6.0"]
 ```
 
 # Touchstone, a split-testing library for Clojure
@@ -32,7 +32,7 @@ lein all test
 Depend on Touchstone in your `project.clj`:
 
 ```clojure
-[com.taoensso/touchstone "0.5.0"]
+[com.taoensso/touchstone "0.6.0"]
 ```
 
 and `require` the library:
