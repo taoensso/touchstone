@@ -1,5 +1,5 @@
 (defproject com.taoensso/touchstone "0.6.0"
-  :description "Simple, Redis-backed split-testing for Clojure."
+  :description "Clojure split-testing library"
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"}
   :dependencies [[org.clojure/clojure  "1.3.0"]

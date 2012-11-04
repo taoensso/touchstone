@@ -4,27 +4,20 @@ Current [semantic](http://semver.org/) version:
 [com.taoensso/touchstone "0.6.0"]
 ```
 
-# Touchstone, a split-testing library for Clojure
+# Touchstone, a Clojure split-testing library
 
 [Split-testing](http://en.wikipedia.org/wiki/A/B_testing) is great for **conversion optimization**. We should all be doing more of it. But traditional A/B tests can be a nuisance to setup and monitor.
 
 Touchstone is an attempt to bring **dead-simple split-testing** to any Clojure web application. It uses [multi-armed bandit](http://en.wikipedia.org/wiki/Multi-armed_bandit) techniques to provide **fast, accurate, low-maintenance** conversion optimization.
 
 ## What's In The Box?
- * Small, uncomplicated all-Clojure library.
+ * Small, uncomplicated **all-Clojure** library.
  * **Great performance** (backed by [Redis](http://redis.io/) and [Carmine](https://github.com/ptaoussanis/carmine)).
  * **High flexibility** (variations are arbitrary Clojure forms).
  * **Low maintenace** (fire-and-forget, automatic-selection algorithm).
  * Fire-and-forget **multivariate** testing.
  * **Ring middleware**.
 
-## Status
-
-Touchstone is still currently *experimental*. It **has not yet been thoroughly tested in production** and its API is subject to change. To run tests against all supported Clojure versions, use:
-
-```bash
-lein all test
-```
 ## Getting Started
 
 ### Leiningen
@@ -91,12 +84,8 @@ ClojureWerkz is a growing collection of open-source, batteries-included [Clojure
 
 ## Contact & Contribution
 
-Reach me (Peter Taoussanis) at *ptaoussanis at gmail.com* for questions/comments/suggestions/whatever. I'm very open to ideas if you have any!
-
-I'm also on Twitter: [@ptaoussanis](https://twitter.com/#!/ptaoussanis).
+Reach me (Peter Taoussanis) at *ptaoussanis at gmail.com* for questions/comments/suggestions/whatever. I'm very open to ideas if you have any! I'm also on Twitter: [@ptaoussanis](https://twitter.com/#!/ptaoussanis).
 
 ## License
 
-Copyright &copy; 2012 Peter Taoussanis
-
-Distributed under the [Eclipse Public License](http://www.eclipse.org/legal/epl-v10.html), the same as Clojure.
+Copyright &copy; 2012 Peter Taoussanis. Distributed under the [Eclipse Public License](http://www.eclipse.org/legal/epl-v10.html), the same as Clojure.
