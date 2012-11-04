@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "0.5.0"
+(defproject com.taoensso/touchstone "0.5.1"
   :description "Simple, Redis-backed split-testing for Clojure."
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"}
