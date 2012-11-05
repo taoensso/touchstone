@@ -94,28 +94,30 @@
   ;; To prevent caching of form eval, delay-map is regenerated for each call
   `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
 
-(defn- mab-select*
+(defn mab-select*
   [test-name delayed-forms-map]
-  (if-not *mab-subject-id*
+  (let [get-form         (fn [form-name] (force (get delayed-forms-map form-name)))
+        get-leading-form (fn [] (get-form (ucb1-select test-name
+                                                      (keys delayed-forms-map))))]
 
-    ;; Return leading form and do nothing else
-    (force (ucb1-select test-name (keys delayed-forms-map)))
+    (if-not *mab-subject-id*
+      (get-leading-form) ; Return leading form and do nothing else
 
-    (let [selection-tkey           (tkey test-name "selection" *mab-subject-id*)
-          prior-selected-form-name (keyword (wcar (car/get selection-tkey)))
+      (let [selection-tkey           (tkey test-name "selection" *mab-subject-id*)
+            prior-selected-form-name (keyword (wcar (car/get selection-tkey)))
 
-          try-select-form!
-          (fn [form-name]
-            (when-let [form (force (get delayed-forms-map form-name))]
-              (wcar ; Refresh 2 hr selection stickiness, inc view counter
-               (car/setex selection-tkey (* 2 60 60) (name form-name))
-               (car/hincrby (tkey test-name "nviews") (name form-name) 1))
-              form))]
+            select-form! ; Return a form and select for testing
+            (fn [form-name]
+              (when-let [form (get-form form-name)]
+                (wcar ; Refresh 2 hr selection stickiness, inc view counter
+                 (car/setex selection-tkey (* 2 60 60) (name form-name))
+                 (car/hincrby (tkey test-name "nviews") (name form-name) 1))
+                form))]
 
-      ;; Honour a recent, valid pre-existing selection (for consistent user
-      ;; experience); otherwise select leading form for testing
-      (or (try-select-form! prior-selected-form-name)
-          (try-select-form! (ucb1-select test-name (keys delayed-forms-map)))))))
+        ;; Honour a recent, valid pre-existing selection (for consistent user
+        ;; experience); otherwise select leading form for testing
+        (or (select-form! prior-selected-form-name)
+            (select-form! (get-leading-form)))))))
 
 (comment (mab-select :landing.buttons.sign-up
                      :sign-up  "Sign-up!"
