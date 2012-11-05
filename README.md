@@ -78,9 +78,11 @@ You can examine the accumulated statistical data at any point:
 
 See the `mab-select` and `mab-commit!` docstrings for info on more advanced capabilities like multivariate testing.
 
-## Touchstone supports the ClojureWerkz Project Goals
+## Touchstone Supports the ClojureWerkz and CDS Project Goals
 
 ClojureWerkz is a growing collection of open-source, batteries-included [Clojure libraries](http://clojurewerkz.org/) that emphasise modern targets, great documentation, and thorough testing.
+
+CDS (Clojure Documentation Site) is a contributor-friendly community project aimed at producing top-notch [Clojure tutorials](http://clojure-doc.org/) and documentation.
 
 ## Contact & Contribution
 
