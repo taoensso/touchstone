@@ -30,20 +30,20 @@
 
 (defmacro with-test-subject
   "Executes body (e.g. handling of a Ring web request) within the context of a
-  thread-local binding for test-subject id. Ids allow us to present a consistent
-  user experience to each test subject for some reasonable duration.
+  thread-local binding for test-subject id. Ids are used to make selected
+  testing forms \"sticky\", presenting a consistent user experience to each
+  test subject during a particular testing session (+/- 2hrs).
 
-  Suitable ids include: user account id, session key, etc. When nil/unspecified,
-  subject will not participate in split-testing (useful for staff/bot web
-  requests, etc.)."
-  [id & body] `(binding [*mab-subject-id* ~id] ~@body))
+  When nil/unspecified, subject will not participate in split-testing (useful
+  for staff/bot web requests, etc.)."
+  [id & body] `(binding [*mab-subject-id* (str ~id)] ~@body))
 
 ;;;;
 
 (def ^:private tkey "Prefixed Touchstone key"
   (memoize (car/make-keyfn "touchstone")))
 
-(def ^:private ucb1-score
+(defn- ucb1-score
   "Use \"UCB1\" formula to score a named MAB test form for selection sorting.
 
   UCB1 MAB provides a number of nice properties including:
@@ -57,21 +57,26 @@
   proportional to our confidence in the superiority of the leading form. This
   implies confidence in both relevant sample sizes, as well as the statistical
   significance of the difference between observed form scores."
+  [test-name form-name]
+  (let [[nviews-map score]
+        (wcar (car/hgetall* (tkey test-name "nviews"))
+              (car/hget     (tkey test-name "scores") (name form-name)))
+
+        score      (or (car/as-double score) 0)
+        nviews     (car/as-long (get nviews-map (name form-name) 0))
+        nviews-sum (reduce + (map car/as-long (vals nviews-map)))]
+
+    (if (or (zero? nviews) (zero? nviews-sum))
+      1000 ;; Very high score (i.e. always select untested forms)
+      (+ (/ score nviews)
+         (Math/sqrt (/ 0.5 (Math/log nviews-sum) nviews))))))
+
+(def ^:private ucb1-select
+  "Returns name of the given form with highest current \"UCB1\" score."
   (utils/memoize-ttl
    10000 ; 10 secs, for performance
-   (fn [test-name form-name]
-     (let [[nviews-map score]
-           (wcar (car/hgetall* (tkey test-name "nviews"))
-                 (car/hget     (tkey test-name "scores") (name form-name)))
-
-           score      (or (car/as-double score) 0)
-           nviews     (car/as-long (get nviews-map (name form-name) 0))
-           nviews-sum (reduce + (map car/as-long (vals nviews-map)))]
-
-       (if (or (zero? nviews) (zero? nviews-sum))
-         1000 ;; Very high score (i.e. always select untested forms)
-         (+ (/ score nviews)
-            (Math/sqrt (/ 0.5 (Math/log nviews-sum) nviews))))))))
+   (fn [test-name form-names]
+     (last (sort-by #(ucb1-score test-name %) form-names)))))
 
 (declare mab-select*)
 
@@ -79,43 +84,40 @@
   "Defines a named MAB test that selects and evaluates one of the named testing
   forms using the \"UCB1\" selection algorithm.
 
-  Returns default (first) form when *mab-subject-id* is nil/unspecified.
-
       (mab-select :my-test-1
                   :my-form-1 \"String 1\"
                   :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
 
   Test forms may be added or removed at any time, but avoid changing forms once
   named."
-  [test-name & [default-form-name & _ :as name-form-pairs]]
-  `(mab-select* ~test-name ~default-form-name
-                ;; Note that to prevent caching of form evaluation, we actually
-                ;; DO want a fresh delay-map for each call
-                (utils/delay-map ~@name-form-pairs)))
+  [test-name & name-form-pairs]
+  ;; To prevent caching of form eval, delay-map is regenerated for each call
+  `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
 
-(defn- mab-select*
-  [test-name default-form-name delayed-forms-map]
-  (if-not *mab-subject-id*
+(defn mab-select*
+  [test-name delayed-forms-map]
+  (let [get-form         (fn [form-name] (force (get delayed-forms-map form-name)))
+        get-leading-form (fn [] (get-form (ucb1-select test-name
+                                                      (keys delayed-forms-map))))]
 
-    ;; Return default form and do nothing else
-    (force (get delayed-forms-map default-form-name))
+    (if-not *mab-subject-id*
+      (get-leading-form) ; Return leading form and do nothing else
 
-    (let [selection-tkey           (tkey test-name "selection" *mab-subject-id*)
-          prior-selected-form-name (keyword (wcar (car/get selection-tkey)))
+      (let [selection-tkey           (tkey test-name "selection" *mab-subject-id*)
+            prior-selected-form-name (keyword (wcar (car/get selection-tkey)))
 
-          try-select-form!
-          (fn [form-name]
-            (when-let [form (force (get delayed-forms-map form-name))]
-              (wcar ; Refresh 2 hr selection stickiness, inc view counter
-               (car/setex selection-tkey (* 2 60 60) (name form-name))
-               (car/hincrby (tkey test-name "nviews") (name form-name) 1))
-              form))]
+            select-form! ; Return a form and select for testing
+            (fn [form-name]
+              (when-let [form (get-form form-name)]
+                (wcar ; Refresh 2 hr selection stickiness, inc view counter
+                 (car/setex selection-tkey (* 2 60 60) (name form-name))
+                 (car/hincrby (tkey test-name "nviews") (name form-name) 1))
+                form))]
 
-      ;; Honour a recent, valid pre-existing selection (for consistent user
-      ;; experience); otherwise choose form with highest ucb1-score
-      (or (try-select-form! prior-selected-form-name)
-          (try-select-form!
-           (last (sort-by #(ucb1-score test-name %) (keys delayed-forms-map))))))))
+        ;; Honour a recent, valid pre-existing selection (for consistent user
+        ;; experience); otherwise select leading form for testing
+        (or (select-form! prior-selected-form-name)
+            (select-form! (get-leading-form)))))))
 
 (comment (mab-select :landing.buttons.sign-up
                      :sign-up  "Sign-up!"

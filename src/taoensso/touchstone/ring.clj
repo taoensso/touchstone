@@ -4,28 +4,31 @@
   (:require [clojure.string      :as str]
             [taoensso.touchstone :as touchstone]))
 
-(defn wrap-random-test-subject-id
-  "Wraps Ring handler to randomly generate, sessionize, and bind a test-subject
-  id for request. Request's User-Agent header will be checked, and bots excluded
-  from split-testing by having their id set to nil.
+(defn bot-user-agent?
+  "Simple test for honest bots."
+  [ring-request-headers]
+  (boolean
+   (re-find
+    #"(agent|bing|bot|crawl|curl|facebook|google|index|slurp|spider|teoma|wget)"
+    (str/lower-case (get ring-request-headers "user-agent" "")))))
 
-  Use custom middleware for more sophisticated bot testing, exclusion of staff
-  requests, etc."
-  [handler]
-  (fn [request]
-    (if (contains? (:session request) :mab-subject-id)
-      (let [sessionized-id (get-in request [:session :mab-subject-id])]
-        (touchstone/with-test-subject sessionized-id (handler request)))
+(comment (bot-user-agent? {"user-agent" "GoogleBot"}))
 
-      ;; Handle with then sessionize a new, randomly-generated id
-      (let [user-agent (-> (get-in request [:headers "user-agent"] "")
-                           str/lower-case)
-            known-bots-regex
-            #"(agent|bing|bot|crawl|curl|facebook|google|index|slurp|spider|teoma|wget)"
+(defn make-wrap-random-test-subject-id
+  "Returns Ring middleware that generates, sessionizes, and binds a test-subject
+  id for requests eligible for split-testing (by default this excludes clients
+  that report themselves as bots)."
+  [& {:keys [eligible?-fn]
+      :or   {eligible?-fn (fn [request] (not (bot-user-agent? (:headers request))))}}]
+  (fn [handler]
+    (fn [request]
+      (if-not (eligible?-fn request)
+        (handler request)
 
-            new-id (when-not (re-find known-bots-regex user-agent)
-                     (str (java.util.UUID/randomUUID))) ; nil for bots
-            response (touchstone/with-test-subject new-id (handler request))]
-        (assoc-in response [:session :mab-subject-id] new-id)))))
+        (if (contains? (:session request) :mab-subject-id)
+          (let [sessionized-id (get-in request [:session :mab-subject-id])]
+            (touchstone/with-test-subject sessionized-id (handler request)))
 
-
+          (let [new-id   (str (rand-int 2147483647))
+                response (touchstone/with-test-subject new-id (handler request))]
+            (assoc-in response [:session :mab-subject-id] new-id)))))))
