@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.6.0"]
+[com.taoensso/touchstone "0.6.1"]
 ```
 
 # Touchstone, a Clojure split-testing library
@@ -25,7 +25,7 @@ Touchstone is an attempt to bring **dead-simple split-testing** to any Clojure w
 Depend on Touchstone in your `project.clj`:
 
 ```clojure
-[com.taoensso/touchstone "0.6.0"]
+[com.taoensso/touchstone "0.6.1"]
 ```
 
 and `require` the library:
@@ -78,9 +78,11 @@ You can examine the accumulated statistical data at any point:
 
 See the `mab-select` and `mab-commit!` docstrings for info on more advanced capabilities like multivariate testing.
 
-## Touchstone supports the ClojureWerkz Project Goals
+## Touchstone Supports the ClojureWerkz and CDS Project Goals
 
 ClojureWerkz is a growing collection of open-source, batteries-included [Clojure libraries](http://clojurewerkz.org/) that emphasise modern targets, great documentation, and thorough testing.
+
+CDS (Clojure Documentation Site) is a contributor-friendly community project aimed at producing top-notch [Clojure tutorials](http://clojure-doc.org/) and documentation.
 
 ## Contact & Contribution
 
