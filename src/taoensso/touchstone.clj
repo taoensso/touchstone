@@ -97,11 +97,10 @@
 (defn mab-select*
   [test-name delayed-forms-map]
   (let [get-form         (fn [form-name] (force (get delayed-forms-map form-name)))
-        get-leading-form (fn [] (get-form (ucb1-select test-name
-                                                      (keys delayed-forms-map))))]
+        leading-form     (delay (ucb1-select test-name (keys delayed-forms-map)))]
 
     (if-not *mab-subject-id*
-      (get-leading-form) ; Return leading form and do nothing else
+      (get-form @leading-form) ; Return leading form and do nothing else
 
       (let [selection-tkey           (tkey test-name "selection" *mab-subject-id*)
             prior-selected-form-name (keyword (wcar (car/get selection-tkey)))
@@ -117,7 +116,7 @@
         ;; Honour a recent, valid pre-existing selection (for consistent user
         ;; experience); otherwise select leading form for testing
         (or (select-form! prior-selected-form-name)
-            (select-form! (get-leading-form)))))))
+            (select-form! @leading-form))))))
 
 (comment (mab-select :landing.buttons.sign-up
                      :sign-up  "Sign-up!"
