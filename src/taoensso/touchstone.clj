@@ -142,11 +142,11 @@
   to get fancy with the spices."
   ([test-name value]
      (when *mab-subject-id*
-       (if-let [selected-form-name
-                (keyword (wcar (car/get (tkey test-name "selection"
-                                              *mab-subject-id*))))]
-         (wcar (car/hincrby (tkey test-name "scores") (name selected-form-name)
-                            value)))))
+       (when-let [selected-form-name
+                  (keyword (wcar (car/get (tkey test-name "selection"
+                                                *mab-subject-id*))))]
+         (wcar (car/hincrbyfloat (tkey test-name "scores") (name selected-form-name)
+                                 (str value))))))
   ([test-name value & name-value-pairs]
      (dorun (map (fn [[n v]] (mab-commit! n v))
                  (partition 2 (into [test-name value] name-value-pairs))))))
@@ -175,7 +175,8 @@
 (comment (pr-mab-results :landing.buttons.sign-up :landing.title))
 
 (comment
-  (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews")))
+  (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews"))
+        (car/hgetall* (tkey :landing.buttons.sign-up "scores")))
 
   (with-test-subject "user1403"
     (mab-select
