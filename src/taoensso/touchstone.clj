@@ -89,7 +89,10 @@
                   :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
 
   Test forms may be added or removed at any time, but avoid changing forms once
-  named."
+  named.
+
+  Tests are fully composable: for advanced testing forms may contain other MAB
+  [sub-]tests."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
   `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
