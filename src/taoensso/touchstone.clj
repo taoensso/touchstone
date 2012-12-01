@@ -91,7 +91,7 @@
   Test forms may be added or removed at any time, but avoid changing forms once
   named.
 
-  Tests are fully composable: for advanced testing forms may contain other MAB
+  Tests are fully composable for advanced testing: forms may contain other MAB
   [sub-]tests."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
@@ -135,7 +135,7 @@
                    :landing.title           1)
 
       ;; On buy button click:
-      (mab-commit! :sale-price order-item-qty)
+      (mab-commit! :sale-price order-item-qty 1)
 
   There's great flexibility in this to model all kinds of single or
   multivariate test->event interactions. Any event can contribute to the
