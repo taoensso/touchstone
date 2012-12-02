@@ -143,14 +143,14 @@
 
 (defn mab-commit!
   "Records the occurrence of one or more events, each of which will contribute
-  a specified value (positive or negative) to a named MAB test score.
+  a specified value (-1 <= value <= 1) to a named MAB test score.
 
       ;; On sign-up button click:
       (mab-commit! :landing.buttons.sign-up 1
-                   :landing.title           1)
+                   :landing.title           0.5)
 
       ;; On buy button click:
-      (mab-commit! :sale-price order-item-qty 1)
+      (mab-commit! :sale-price (if (>= order-item-qty 2) 1 0.8))
 
   There's great flexibility in this to model all kinds of single or
   multivariate test->event interactions. Any event can contribute to the
@@ -158,7 +158,7 @@
 
   The statistics can get complicated so try keep things simple: resist the urge
   to get fancy with the spices."
-  ([test-name value]
+  ([test-name value] {:pre [(>= value -1) (<= value 1)]}
      (when *mab-subject-id*
        (when-let [selected-form-name
                   (keyword (wcar (car/get (tkey test-name "selection"
@@ -204,4 +204,4 @@
      :yellow "Yellow button"))
 
   (with-test-subject "user1403"
-    (mab-commit! :landing.buttons.sign-up 100)))
+    (mab-commit! :landing.buttons.sign-up 1)))
