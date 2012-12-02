@@ -43,6 +43,8 @@
 (def ^:private tkey "Prefixed Touchstone key"
   (memoize (car/make-keyfn "touchstone")))
 
+(declare ucb1-score*)
+
 (defn- ucb1-score
   "Use \"UCB1\" formula to score a named MAB test form for selection sorting.
 
@@ -53,10 +55,11 @@
     * Support for test-form hot-swapping.
     * Support for multivariate testing.
 
-  Formula motivation: we want frequency of exploration to be inversly
-  proportional to our confidence in the superiority of the leading form. This
-  implies confidence in both relevant sample sizes, as well as the statistical
-  significance of the difference between observed form scores."
+  Formula motivation: we want untested forms to be selected first and, more
+  generally, the frequency of exploration to be inversly proportional to our
+  confidence in the superiority of the leading form. This implies confidence in
+  both relevant sample sizes, as well as the statistical significance of the
+  difference between observed form scores."
   [test-name form-name]
   (let [[nviews-map score]
         (wcar (car/hgetall* (tkey test-name "nviews"))
@@ -65,11 +68,23 @@
         score      (or (car/as-double score) 0)
         nviews     (car/as-long (get nviews-map (name form-name) 0))
         nviews-sum (reduce + (map car/as-long (vals nviews-map)))]
+    (ucb1-score* nviews-sum nviews score)))
 
-    (if (or (zero? nviews) (zero? nviews-sum))
-      1000 ;; Very high score (i.e. always select untested forms)
-      (+ (/ score nviews)
-         (Math/sqrt (/ 0.5 (Math/log nviews-sum) nviews))))))
+(defn- ucb1-score* [N n score]
+  (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
+
+(comment
+  ;; Confidence bound:
+  (- (ucb1-score* 10  5   (* 0.5  5))    0.5) ; Reference: 0.9595
+  (- (ucb1-score* 400 200 (* 0.5  200))  0.5) ; Reference: 0.2448
+  (- (ucb1-score* 400 200 (* 0.5  200))  0.5) ; Reference: 0.2448
+  (- (ucb1-score* 400 200 (* -0.5 200)) -0.5) ; Reference: 0.2448
+
+  ;; Always select untested forms:
+  (ucb1-score* 100 0 0) ; 3.035
+  (ucb1-score* 100 2 0) ; 2.146
+  (ucb1-score* 100 3 0) ; 1.752
+  )
 
 (def ^:private ucb1-select
   "Returns name of the given form with highest current \"UCB1\" score."
@@ -177,9 +192,8 @@
 
 (comment (pr-mab-results :landing.buttons.sign-up :landing.title))
 
-(comment
-  (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews"))
-        (car/hgetall* (tkey :landing.buttons.sign-up "scores")))
+(comment (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews"))
+               (car/hgetall* (tkey :landing.buttons.sign-up "scores")))
 
   (with-test-subject "user1403"
     (mab-select
