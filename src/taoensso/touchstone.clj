@@ -26,7 +26,7 @@
   `(let [{pool# :pool spec# :spec} (@config :carmine)]
      (car/with-conn pool# spec# ~@body)))
 
-(def ^:private ^:dynamic *mab-subject-id* nil)
+(def ^:dynamic *mab-subject-id* nil)
 
 (defmacro with-test-subject
   "Executes body (e.g. handling of a Ring web request) within the context of a
