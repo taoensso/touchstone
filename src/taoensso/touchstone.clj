@@ -26,7 +26,7 @@
   `(let [{pool# :pool spec# :spec} (@config :carmine)]
      (car/with-conn pool# spec# ~@body)))
 
-(def ^:private ^:dynamic *mab-subject-id* nil)
+(def ^:dynamic *mab-subject-id* nil)
 
 (defmacro with-test-subject
   "Executes body (e.g. handling of a Ring web request) within the context of a
@@ -43,6 +43,8 @@
 (def ^:private tkey "Prefixed Touchstone key"
   (memoize (car/make-keyfn "touchstone")))
 
+(declare ucb1-score*)
+
 (defn- ucb1-score
   "Use \"UCB1\" formula to score a named MAB test form for selection sorting.
 
@@ -53,10 +55,11 @@
     * Support for test-form hot-swapping.
     * Support for multivariate testing.
 
-  Formula motivation: we want frequency of exploration to be inversly
-  proportional to our confidence in the superiority of the leading form. This
-  implies confidence in both relevant sample sizes, as well as the statistical
-  significance of the difference between observed form scores."
+  Formula motivation: we want untested forms to be selected first and, more
+  generally, the frequency of exploration to be inversly proportional to our
+  confidence in the superiority of the leading form. This implies confidence in
+  both relevant sample sizes, as well as the statistical significance of the
+  difference between observed form scores."
   [test-name form-name]
   (let [[nviews-map score]
         (wcar (car/hgetall* (tkey test-name "nviews"))
@@ -65,11 +68,23 @@
         score      (or (car/as-double score) 0)
         nviews     (car/as-long (get nviews-map (name form-name) 0))
         nviews-sum (reduce + (map car/as-long (vals nviews-map)))]
+    (ucb1-score* nviews-sum nviews score)))
 
-    (if (or (zero? nviews) (zero? nviews-sum))
-      1000 ;; Very high score (i.e. always select untested forms)
-      (+ (/ score nviews)
-         (Math/sqrt (/ 0.5 (Math/log nviews-sum) nviews))))))
+(defn- ucb1-score* [N n score]
+  (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
+
+(comment
+  ;; Confidence bound:
+  (- (ucb1-score* 10  5   (* 0.5  5))    0.5) ; Reference: 0.9595
+  (- (ucb1-score* 400 200 (* 0.5  200))  0.5) ; Reference: 0.2448
+  (- (ucb1-score* 400 200 (* 0.5  200))  0.5) ; Reference: 0.2448
+  (- (ucb1-score* 400 200 (* -0.5 200)) -0.5) ; Reference: 0.2448
+
+  ;; Always select untested forms:
+  (ucb1-score* 100 0 0) ; 3.035
+  (ucb1-score* 100 2 0) ; 2.146
+  (ucb1-score* 100 3 0) ; 1.752
+  )
 
 (def ^:private ucb1-select
   "Returns name of the given form with highest current \"UCB1\" score."
@@ -91,7 +106,7 @@
   Test forms may be added or removed at any time, but avoid changing forms once
   named.
 
-  Tests are fully composable: for advanced testing forms may contain other MAB
+  Tests are fully composable for advanced testing: forms may contain other MAB
   [sub-]tests."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
@@ -128,14 +143,14 @@
 
 (defn mab-commit!
   "Records the occurrence of one or more events, each of which will contribute
-  a specified value (positive or negative) to a named MAB test score.
+  a specified value (-1 <= value <= 1) to a named MAB test score.
 
       ;; On sign-up button click:
       (mab-commit! :landing.buttons.sign-up 1
-                   :landing.title           1)
+                   :landing.title           0.5)
 
       ;; On buy button click:
-      (mab-commit! :sale-price order-item-qty)
+      (mab-commit! :sale-price (if (>= order-item-qty 2) 1 0.8))
 
   There's great flexibility in this to model all kinds of single or
   multivariate test->event interactions. Any event can contribute to the
@@ -143,7 +158,7 @@
 
   The statistics can get complicated so try keep things simple: resist the urge
   to get fancy with the spices."
-  ([test-name value]
+  ([test-name value] {:pre [(>= value -1) (<= value 1)]}
      (when *mab-subject-id*
        (when-let [selected-form-name
                   (keyword (wcar (car/get (tkey test-name "selection"
@@ -177,9 +192,8 @@
 
 (comment (pr-mab-results :landing.buttons.sign-up :landing.title))
 
-(comment
-  (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews"))
-        (car/hgetall* (tkey :landing.buttons.sign-up "scores")))
+(comment (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews"))
+               (car/hgetall* (tkey :landing.buttons.sign-up "scores")))
 
   (with-test-subject "user1403"
     (mab-select
@@ -190,4 +204,4 @@
      :yellow "Yellow button"))
 
   (with-test-subject "user1403"
-    (mab-commit! :landing.buttons.sign-up 100)))
+    (mab-commit! :landing.buttons.sign-up 1)))
