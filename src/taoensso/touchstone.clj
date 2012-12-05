@@ -141,6 +141,14 @@
                      :join     "Join!"
                      :join-now "Join now!"))
 
+(defn selected-form-name
+  "Returns subject's currently selected form name for test, or nil."
+  [test-name & [mab-subject-id]]
+  (keyword (wcar (car/get (tkey test-name "selection"
+                                (or mab-subject-id *mab-subject-id*))))))
+
+(comment (selected-form-name :landing.buttons.sign-up "user1403"))
+
 (defn mab-commit!
   "Records the occurrence of one or more events, each of which will contribute
   a specified value (-1 <= value <= 1) to a named MAB test score.
@@ -160,9 +168,7 @@
   to get fancy with the spices."
   ([test-name value] {:pre [(>= value -1) (<= value 1)]}
      (when *mab-subject-id*
-       (when-let [selected-form-name
-                  (keyword (wcar (car/get (tkey test-name "selection"
-                                                *mab-subject-id*))))]
+       (when-let [selected-form-name (selected-form-name test-name *mab-subject-id*)]
          (wcar (car/hincrbyfloat (tkey test-name "scores") (name selected-form-name)
                                  (str value))))))
   ([test-name value & name-value-pairs]
