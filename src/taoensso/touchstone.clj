@@ -34,7 +34,7 @@
   testing forms \"sticky\", presenting a consistent user experience to each
   test subject during a particular testing session (+/- 2hrs).
 
-  When nil/unspecified, subject will not participate in split-testing (useful
+  When nil (default), subject will not participate in split-testing (useful
   for staff/bot web requests, etc.)."
   [id & body] `(binding [*mab-subject-id* (str ~id)] ~@body))
 
@@ -75,9 +75,9 @@
 
 (comment
   ;; Confidence bound:
-  (- (ucb1-score* 10  5   (* 0.5  5))    0.5) ; Reference: 0.9595
-  (- (ucb1-score* 400 200 (* 0.5  200))  0.5) ; Reference: 0.2448
-  (- (ucb1-score* 400 200 (* 0.5  200))  0.5) ; Reference: 0.2448
+  (- (ucb1-score* 10  5   (*  0.5 5))    0.5) ; Reference: 0.9595
+  (- (ucb1-score* 400 200 (*  0.5 200))  0.5) ; Reference: 0.2448
+  (- (ucb1-score* 400 200 (*  0.5 200))  0.5) ; Reference: 0.2448
   (- (ucb1-score* 400 200 (* -0.5 200)) -0.5) ; Reference: 0.2448
 
   ;; Always select untested forms:
