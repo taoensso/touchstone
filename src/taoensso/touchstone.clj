@@ -11,8 +11,8 @@
        http://en.wikipedia.org/wiki/Multi-armed_bandit
        http://stevehanov.ca/blog/index.php?id=132"
   {:author "Peter Taoussanis"}
-  (:require [taoensso.carmine          :as car]
-            [taoensso.touchstone.utils :as utils]))
+  (:require [taoensso.carmine          :as car])
+  (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
 ;;;; Config & bindings
 
@@ -63,10 +63,10 @@
   [test-name form-name]
   (let [[nviews-map score]
         (wcar (car/hgetall* (tkey test-name "nviews"))
-              (car/hget     (tkey test-name "scores") (name form-name)))
+              (car/hget     (tkey test-name "scores") (scoped-name form-name)))
 
         score      (or (car/as-double score) 0)
-        nviews     (car/as-long (get nviews-map (name form-name) 0))
+        nviews     (car/as-long (get nviews-map (scoped-name form-name) 0))
         nviews-sum (reduce + (map car/as-long (vals nviews-map)))]
     (ucb1-score* nviews-sum nviews score)))
 
@@ -127,8 +127,8 @@
             (fn [form-name]
               (when-let [form (get-form form-name)]
                 (wcar ; Refresh 2 hr selection stickiness, inc view counter
-                 (car/setex selection-tkey (* 2 60 60) (name form-name))
-                 (car/hincrby (tkey test-name "nviews") (name form-name) 1))
+                 (car/setex selection-tkey (* 2 60 60) (scoped-name form-name))
+                 (car/hincrby (tkey test-name "nviews") (scoped-name form-name) 1))
                 form))]
 
         ;; Honour a recent, valid pre-existing selection (for consistent user
@@ -136,7 +136,7 @@
         (or (select-form! prior-selected-form-name)
             (select-form! @leading-form))))))
 
-(comment (mab-select :landing.buttons.sign-up
+(comment (mab-select :my-app/landing.buttons.sign-up
                      :sign-up  "Sign-up!"
                      :join     "Join!"
                      :join-now "Join now!"))
@@ -147,18 +147,18 @@
   (keyword (wcar (car/get (tkey test-name "selection"
                                 (or mab-subject-id *mab-subject-id*))))))
 
-(comment (selected-form-name :landing.buttons.sign-up "user1403"))
+(comment (selected-form-name :my-app/landing.buttons.sign-up "user1403"))
 
 (defn mab-commit!
   "Records the occurrence of one or more events, each of which will contribute
   a specified value (-1 <= value <= 1) to a named MAB test score.
 
       ;; On sign-up button click:
-      (mab-commit! :landing.buttons.sign-up 1
-                   :landing.title           0.5)
+      (mab-commit! :my-app/landing.buttons.sign-up 1
+                   :my-app/landing.title           0.5)
 
       ;; On buy button click:
-      (mab-commit! :sale-price (if (>= order-item-qty 2) 1 0.8))
+      (mab-commit! :my-app/sale-price (if (>= order-item-qty 2) 1 0.8))
 
   There's great flexibility in this to model all kinds of single or
   multivariate test->event interactions. Any event can contribute to the
@@ -168,14 +168,16 @@
   to get fancy with the spices."
   ([test-name value] {:pre [(>= value -1) (<= value 1)]}
      (when *mab-subject-id*
-       (when-let [selected-form-name (selected-form-name test-name *mab-subject-id*)]
-         (wcar (car/hincrbyfloat (tkey test-name "scores") (name selected-form-name)
+       (when-let [selected-form-name (selected-form-name test-name)]
+         (wcar (car/hincrbyfloat (tkey test-name "scores")
+                                 (scoped-name selected-form-name)
                                  (str value))))))
   ([test-name value & name-value-pairs]
      (dorun (map (fn [[n v]] (mab-commit! n v))
                  (partition 2 (into [test-name value] name-value-pairs))))))
 
-(comment (mab-commit! :landing.buttons.sign-up 1 :landing.title 1))
+(comment (mab-commit! :my-app/landing.buttons.sign-up 1
+                      :my-app/landing.title 1))
 
 (defn pr-mab-results
   "Prints sorted MAB test results."
@@ -196,18 +198,19 @@
                      reverse))))
   ([test-name & more] (dorun (map pr-mab-results (cons test-name more)))))
 
-(comment (pr-mab-results :landing.buttons.sign-up :landing.title))
+(comment (pr-mab-results :my-app/landing.buttons.sign-up
+                         :my-app/landing.title))
 
-(comment (wcar (car/hgetall* (tkey :landing.buttons.sign-up "nviews"))
-               (car/hgetall* (tkey :landing.buttons.sign-up "scores")))
+(comment (wcar (car/hgetall* (tkey :my-app/landing.buttons.sign-up "nviews"))
+               (car/hgetall* (tkey :my-app/landing.buttons.sign-up "scores")))
 
   (with-test-subject "user1403"
     (mab-select
-     :landing.buttons.sign-up
+     :my-app/landing.buttons.sign-up
      :red    "Red button"
      :blue   "Blue button"
      :green  "Green button"
      :yellow "Yellow button"))
 
   (with-test-subject "user1403"
-    (mab-commit! :landing.buttons.sign-up 1)))
+    (mab-commit! :my-app/landing.buttons.sign-up 1)))

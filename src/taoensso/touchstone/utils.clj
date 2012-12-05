@@ -27,3 +27,16 @@
           (let [d-result (delay (apply f args))]
             (swap! cache assoc args {:time-cached now :d-result d-result})
             @d-result))))))
+
+(defn scoped-name
+  "Like `name` but includes namespace in string when present."
+  [x]
+  (if (string? x) x
+      (let [name (.getName ^clojure.lang.Named x)]
+        (if-let [ns (.getNamespace ^clojure.lang.Named x)]
+          (str ns "/" name)
+          name))))
+
+(comment (map scoped-name [:foo :foo/bar :foo.bar/baz])
+         (time (dotimes [_ 10000] (name :foo)))
+         (time (dotimes [_ 10000] (scoped-name :foo))))
