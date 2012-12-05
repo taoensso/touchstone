@@ -40,3 +40,8 @@
 (comment (map scoped-name [:foo :foo/bar :foo.bar/baz])
          (time (dotimes [_ 10000] (name :foo)))
          (time (dotimes [_ 10000] (scoped-name :foo))))
+
+(defn approx=
+  [x y & {:keys [significance]
+          :or   {significance 0.001}}]
+  (< (- x y) significance))
