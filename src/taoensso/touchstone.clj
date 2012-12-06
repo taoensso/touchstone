@@ -24,7 +24,7 @@
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
-                           }}}))
+                           :count-duplicate-activity? false}}}))
 
 (defn set-config! [[k & ks] val] (swap! config assoc-in (cons k ks) val))
 
@@ -137,8 +137,10 @@
                    (car/setex selection-tkey ttl (scoped-name form-name))
                    (car/expire (tkey test-name *mab-subject-id* "committed?") ttl)
 
-                   ;; Count new selection as prospect
-                   (when-not prior-selected-form-name
+                   ;; Count selection as prospect
+                   (when (or (:count-duplicate-activity? (test-config test-name))
+                             (not prior-selected-form-name) ; New selection
+                             )
                      (car/hincrby (tkey test-name "nprospects")
                                   (scoped-name form-name) 1))))
                 form))]
@@ -181,8 +183,8 @@
   ([test-name value] {:pre [(>= value -1) (<= value 1)]}
      (when *mab-subject-id*
        (let [committed?-tkey (tkey test-name *mab-subject-id* "committed?")]
-         ;; Only count a single commit per subject per test per test-session
-         (when-not (car/as-bool (wcar (car/exists committed?-tkey)))
+         (when (or (:count-duplicate-activity? (test-config test-name))
+                   (not (car/as-bool (wcar (car/exists committed?-tkey)))))
            (when-let [selected-form-name (selected-form-name test-name)]
              (wcar
               ;; Count commit value toward score
