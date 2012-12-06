@@ -15,6 +15,8 @@
   (:require [taoensso.carmine          :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
+;; TODO Arbitrary per-test config inheritence (via namespaces?)
+
 ;;;; Config & bindings
 
 (defonce config
