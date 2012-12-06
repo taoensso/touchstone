@@ -15,6 +15,8 @@
   (:require [taoensso.carmine          :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
+;; TODO Arbitrary per-test config inheritence (via namespaces?)
+
 ;;;; Config & bindings
 
 (defonce config
@@ -119,8 +121,10 @@
 
 (defn mab-select*
   [test-name delayed-forms-map]
-  (let [get-form         (fn [form-name] (force (get delayed-forms-map form-name)))
-        leading-form     (delay (ucb1-select test-name (keys delayed-forms-map)))]
+  (let [valid-form?  (fn [form-name] (and form-name
+                                         (contains? delayed-forms-map form-name)))
+        get-form     (fn [form-name] (force (get delayed-forms-map form-name)))
+        leading-form (delay (ucb1-select test-name (keys delayed-forms-map)))]
 
     (if-not *mab-subject-id*
       (get-form @leading-form) ; Return leading form and do nothing else
@@ -130,25 +134,26 @@
 
             select-form! ; Select and return form
             (fn [form-name]
-              (when-let [form (get-form form-name)]
-                (let [ttl (:test-session-ttl (test-config test-name))]
-                  (wcar
-                   ;; Refresh test-session ttl
-                   (car/setex selection-tkey ttl (scoped-name form-name))
-                   (car/expire (tkey test-name *mab-subject-id* "committed?") ttl)
+              (let [form (get-form form-name)
+                    ttl  (:test-session-ttl (test-config test-name))]
+                (wcar
+                 ;; Refresh test-session ttl
+                 (car/setex selection-tkey ttl (scoped-name form-name))
+                 (car/expire (tkey test-name *mab-subject-id* "committed?") ttl)
 
-                   ;; Count selection as prospect
-                   (when (or (:count-duplicate-activity? (test-config test-name))
-                             (not prior-selected-form-name) ; New selection
-                             )
-                     (car/hincrby (tkey test-name "nprospects")
-                                  (scoped-name form-name) 1))))
+                 ;; Count selection as prospect
+                 (when (or (:count-duplicate-activity? (test-config test-name))
+                           (not prior-selected-form-name) ; New selection
+                           )
+                   (car/hincrby (tkey test-name "nprospects")
+                                (scoped-name form-name) 1)))
                 form))]
 
         ;; Selections are sticky: honour a recent, valid pre-existing selection
         ;; (for consistent user experience); otherwise select leading form
-        (or (select-form! prior-selected-form-name)
-            (select-form! @leading-form))))))
+        (if (valid-form? prior-selected-form-name)
+          (select-form! prior-selected-form-name)
+          (select-form! @leading-form))))))
 
 (comment (mab-select :my-app/landing.buttons.sign-up
                      :sign-up  "Sign-up!"

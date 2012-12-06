@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.8.0"]
+[com.taoensso/touchstone "0.8.1"]
 ```
 
 # Touchstone, a Clojure split-testing library
@@ -25,7 +25,7 @@ Touchstone is an attempt to bring **dead-simple split-testing** to any Clojure w
 Depend on Touchstone in your `project.clj`:
 
 ```clojure
-[com.taoensso/touchstone "0.8.0"]
+[com.taoensso/touchstone "0.8.1"]
 ```
 
 and `require` the library:
@@ -86,7 +86,7 @@ CDS (Clojure Documentation Site) is a contributor-friendly community project aim
 
 ## Contact & Contribution
 
-Reach me (Peter Taoussanis) at *ptaoussanis at gmail.com* for questions/comments/suggestions/whatever. I'm very open to ideas if you have any! I'm also on Twitter: [@ptaoussanis](https://twitter.com/#!/ptaoussanis).
+Reach me (Peter Taoussanis) at [taoensso.com](https://www.taoensso.com) for questions/comments/suggestions/whatever. I'm very open to ideas if you have any! I'm also on Twitter: [@ptaoussanis](https://twitter.com/#!/ptaoussanis).
 
 ## License
 
