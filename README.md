@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.7.0"]
+[com.taoensso/touchstone "0.8.0"]
 ```
 
 # Touchstone, a Clojure split-testing library
@@ -25,7 +25,7 @@ Touchstone is an attempt to bring **dead-simple split-testing** to any Clojure w
 Depend on Touchstone in your `project.clj`:
 
 ```clojure
-[com.taoensso/touchstone "0.7.0"]
+[com.taoensso/touchstone "0.8.0"]
 ```
 
 and `require` the library:
@@ -53,7 +53,7 @@ To optimize a Ring web application, start by adding `(taoensso.touchstone.ring/m
 One or more named-test selectors can then be used as part of your page content:
 
 ```clojure
-(touchstone/mab-select :landing.buttons.sign-up ; Test name
+(touchstone/mab-select :my-app/landing.buttons.sign-up ; Test name
                        :sign-up  "Sign-up!"   ; Named variation #1
                        :join     "Join!"      ; Named variation #2
                        :join-now "Join now!"  ; Named variation #3
@@ -63,16 +63,16 @@ One or more named-test selectors can then be used as part of your page content:
 And relevant events recorded:
 
 ```clojure
-(touchstone/mab-commit! :landing.buttons.sign-up 1) ; On sign-up button click
+(touchstone/mab-commit! :my-app/landing.buttons.sign-up 1) ; On sign-up button click
 ```
 
-Touchstone will now **automatically** start using accumulated statistical data to optimize the selection of the `:landing.buttons.signup` test variations for maximum clicks.
+Touchstone will now **automatically** start using accumulated statistical data to optimize the selection of the `:my-app/landing.buttons.signup` test variations for maximum clicks.
 
 You can examine the accumulated statistical data at any point:
 
 ```clojure
-(touchstone/pr-mab-results :landing.buttons.sign-up)
-%> MAB test :landing.buttons.sign-up with 17 total views and a cumulative score of 2:
+(touchstone/pr-mab-results :my-app/landing.buttons.sign-up)
+%> MAB test :my-app/landing.buttons.sign-up with 17 total views and a cumulative score of 2:
 %> ([:sign-up 28.68] [:join-now 4.33] [:join 1.11])
 ```
 
