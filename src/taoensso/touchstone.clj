@@ -17,11 +17,21 @@
 
 ;;;; Config & bindings
 
-(defonce config (atom {:carmine {:pool (car/make-conn-pool)
-                                 :spec (car/make-conn-spec)}
-                       :test-session-ttl 7200}))
+(defonce config
+  ^{:doc
+    "This map atom controls everything about the way Touchstone operates.
+     See source code for details."}
+  (atom {:carmine {:pool (car/make-conn-pool)
+                   :spec (car/make-conn-spec)}
+         :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
+                           }}}))
 
 (defn set-config! [[k & ks] val] (swap! config assoc-in (cons k ks) val))
+
+(defn test-config "Returns per-test config, merged over defaults."
+  [test-name]
+  (let [tests-config (:tests @config)]
+    (merge (:default tests-config) (get tests-config test-name))))
 
 (comment (test-config :my-app/landing.buttons.sign-up))
 
@@ -121,7 +131,7 @@
             select-form! ; Select and return form
             (fn [form-name]
               (when-let [form (get-form form-name)]
-                (let [ttl (:test-session-ttl @config)]
+                (let [ttl (:test-session-ttl (test-config test-name))]
                   (wcar
                    ;; Refresh test-session ttl
                    (car/setex selection-tkey ttl (scoped-name form-name))
@@ -181,7 +191,8 @@
                                 (str value))
 
               ;; Mark test as committed for this subject's test-session
-              (car/setex committed?-tkey (:test-session-ttl @config) 1)))))))
+              (car/setex committed?-tkey
+                         (:test-session-ttl (test-config test-name)) 1)))))))
   ([test-name value & name-value-pairs]
      (dorun (map (fn [[n v]] (mab-commit! n v))
                  (partition 2 (into [test-name value] name-value-pairs))))))
