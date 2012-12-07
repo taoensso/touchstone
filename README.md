@@ -8,14 +8,15 @@ Current [semantic](http://semver.org/) version:
 
 [Split-testing](http://en.wikipedia.org/wiki/A/B_testing) is great for **conversion optimization**. We should all be doing more of it. But traditional A/B tests can be a nuisance to setup and monitor.
 
-Touchstone is an attempt to bring **dead-simple split-testing** to any Clojure web application. It uses [multi-armed bandit](http://en.wikipedia.org/wiki/Multi-armed_bandit) techniques to provide **fast, accurate, low-maintenance** conversion optimization.
+Touchstone is an attempt to bring **dead-simple, high-power split-testing** to any Clojure web application. It uses [multi-armed bandit](http://en.wikipedia.org/wiki/Multi-armed_bandit) techniques to provide **fast, accurate, low-maintenance** conversion optimization. The API is very simple and *highly flexible*.
 
 ## What's In The Box?
  * Small, uncomplicated **all-Clojure** library.
  * **Great performance** (backed by [Redis](http://redis.io/) and [Carmine](https://github.com/ptaoussanis/carmine)).
- * **High flexibility** (variations are arbitrary Clojure forms).
+ * **High flexibility** (variations are *arbitrary Clojure forms*).
  * **Low maintenace** (fire-and-forget, automatic-selection algorithm).
  * Fire-and-forget **multivariate** testing.
+ * Support for **advanced techniques** like test composition (dependent tests), arbitrary scoring, engagement testing, etc.
  * **Ring middleware**.
 
 ## Getting Started
@@ -48,7 +49,7 @@ Traditional split-testing consists of 4 steps:
 
 The particular multi-armed bandit technique used by Touchstone means that we only concern ourselves with steps 1 and 3. Steps 2 and 4 are handled automatically by the algorithm.
 
-To optimize a Ring web application, start by adding `(taoensso.touchstone.ring/make-wrap-random-test-subject-id)` to your middleware stack.
+**To optimize a Ring web application**, start by adding `(taoensso.touchstone.ring/make-wrap-random-test-subject-id)` to your middleware stack.
 
 One or more named-test selectors can then be used as part of your page content:
 
@@ -68,7 +69,9 @@ And relevant events recorded:
 
 Touchstone will now **automatically** start using accumulated statistical data to optimize the selection of the `:my-app/landing.buttons.signup` test variations for maximum clicks.
 
-You can examine the accumulated statistical data at any point:
+And you're done! That's literally all there is to it.
+
+If you're interested, you can examine the accumulated statistical data at any point:
 
 ```clojure
 (touchstone/pr-mab-results :my-app/landing.buttons.sign-up)
@@ -76,7 +79,7 @@ You can examine the accumulated statistical data at any point:
 %> ([:sign-up 28.68] [:join-now 4.33] [:join 1.11])
 ```
 
-See the `mab-select` and `mab-commit!` docstrings for info on more advanced capabilities like multivariate testing.
+See the `mab-select` and `mab-commit!` docstrings for info on more advanced capabilities like **multivariate testing, test composition (dependent tests), arbitrary scoring, engagement testing**, etc.
 
 ## Touchstone Supports the ClojureWerkz and CDS Project Goals
 
