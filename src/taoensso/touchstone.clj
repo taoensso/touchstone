@@ -12,10 +12,12 @@
        http://en.wikipedia.org/wiki/Multi-armed_bandit
        http://stevehanov.ca/blog/index.php?id=132"
   {:author "Peter Taoussanis"}
-  (:require [taoensso.carmine          :as car])
+  (:require [clojure.string            :as str]
+            [taoensso.carmine          :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
-;; TODO Arbitrary per-test config inheritence (via namespaces?)
+;; TODO Arbitrary per-test config inheritence
+;;      (via namespaces? :test-profiles? with-test-config?)
 
 ;;;; Config & bindings
 
@@ -26,6 +28,7 @@
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
+                           ;; Turn on for engagement testing:
                            :count-duplicate-activity? false}}}))
 
 (defn set-config! [[k & ks] val] (swap! config assoc-in (cons k ks) val))
@@ -50,7 +53,7 @@
   participate in split-testing (useful for staff/bot web requests, etc.)."
   [id & body] `(binding [*mab-subject-id* (str ~id)] ~@body))
 
-;;;;
+;;;; Selects & commits
 
 (def ^:private tkey "Prefixed Touchstone key"
   (memoize (car/make-keyfn "touchstone")))
@@ -107,14 +110,18 @@
 
 (defmacro mab-select
   "Defines a named MAB test that selects and evaluates one of the named testing
-  forms using the \"UCB1\" selection algorithm.
-
+  forms using the \"UCB1\" selection algorithm:
       (mab-select :my-test-1
                   :my-form-1 \"String 1\"
                   :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
 
-  Tests are composable. Test forms may be added or removed at any time, but
-  avoid changing forms once named."
+  Dependent tests may be created through composition:
+      (mab-select :my-test-1
+                  :my-form-1 \"String 1\"
+                  :my-form-2 (mab-select :my-test-1a ...))
+
+  Test forms may be freely added or removed from an ongoing test at any time,
+  but avoid changing forms once named."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
   `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
@@ -161,7 +168,12 @@
                      :join-now "Join now!"))
 
 (defn selected-form-name
-  "Returns subject's currently selected form name for test, or nil."
+  "Returns subject's currently selected form name for test, or nil. One common
+  idiom is to use this for creating dependent tests:
+      (case (selected-form-name :my-test-1)
+        :my-form-1 (mab-select :my-test-1a ...)
+        :my-form-2 (mab-select :my-test-1b ...)
+        nil)"
   [test-name & [mab-subject-id]]
   (keyword (wcar (car/get (tkey test-name (or mab-subject-id *mab-subject-id*)
                                 "selection")))))
@@ -170,7 +182,7 @@
 
 (defn mab-commit!
   "Indicates the occurrence of one or more events, each of which may contribute
-  a specified value (-1 <= value <= 1) to a named MAB test score.
+  a specified value (-1 <= value <= 1) to a named MAB test score:
 
       ;; On sign-up button click:
       (mab-commit! :my-app/landing.buttons.sign-up 1
@@ -207,6 +219,8 @@
 (comment (mab-commit! :my-app/landing.buttons.sign-up 1
                       :my-app/landing.title 1))
 
+;;;; Reporting
+
 (defn pr-mab-results
   "Prints sorted MAB test results."
   ([test-name]
@@ -226,11 +240,13 @@
                      reverse))))
   ([test-name & more] (dorun (map pr-mab-results (cons test-name more)))))
 
-(comment (pr-mab-results :my-app/landing.buttons.sign-up
-                         :my-app/landing.title))
+(comment
 
-(comment (wcar (car/hgetall* (tkey :my-app/landing.buttons.sign-up "nprospects"))
-               (car/hgetall* (tkey :my-app/landing.buttons.sign-up "scores")))
+  (wcar (car/hgetall* (tkey :my-app/landing.buttons.sign-up "nprospects"))
+        (car/hgetall* (tkey :my-app/landing.buttons.sign-up "scores")))
+
+  (pr-mab-results :my-app/landing.buttons.sign-up
+                  :my-app/landing.title)
 
   (with-test-subject "user1403"
     (mab-select
@@ -242,3 +258,23 @@
 
   (with-test-subject "user1403"
     (mab-commit! :my-app/landing.buttons.sign-up 1)))
+
+;;;; Admin
+
+(defn- test-tkeys [test-name]
+  (when test-name (wcar (car/keys (tkey test-name "*")))))
+
+(defn delete-test [test-name]
+  (when-let [tkeys (seq (test-tkeys test-name))]
+    (wcar (apply car/del tkeys))))
+
+(defn rename-test [old-name new-name]
+  (when-let [old-tkeys (seq (test-tkeys old-name))]
+    (let [new-tkeys (map #(str/replace % (re-pattern (str "^" (tkey old-name)))
+                                       (tkey new-name)) old-tkeys)]
+      (wcar (doall (map car/renamenx old-tkeys new-tkeys))))))
+
+(comment (test-tkeys  :my-app/landing.buttons.sign-up)
+         (delete-test :my-app/landing.buttons.sign-up)
+         (rename-test :my-app/landing.buttons.sign-up :my-app/foobar)
+         (rename-test :my-app/foobar :my-app/landing.buttons.sign-up))
