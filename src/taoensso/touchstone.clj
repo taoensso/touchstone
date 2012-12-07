@@ -16,8 +16,9 @@
             [taoensso.carmine          :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
-;; TODO Arbitrary per-test config inheritence
-;;      (via namespaces? :test-profiles? with-test-config?)
+;;;; TODO
+;; * Per-test config inheritence (namespaces? :test-profiles? with-test-config?)
+;; * Test commit & reporting groups?
 
 ;;;; Config & bindings
 
@@ -115,12 +116,12 @@
                   :my-form-1 \"String 1\"
                   :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
 
-  Dependent tests may be created through composition:
+  Dependent tests can be created through composition:
       (mab-select :my-test-1
                   :my-form-1 \"String 1\"
                   :my-form-2 (mab-select :my-test-1a ...))
 
-  Test forms may be freely added or removed from an ongoing test at any time,
+  Test forms can be freely added or removed from an ongoing test at any time,
   but avoid changing forms once named."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
