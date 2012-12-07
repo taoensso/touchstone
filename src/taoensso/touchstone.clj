@@ -12,10 +12,12 @@
        http://en.wikipedia.org/wiki/Multi-armed_bandit
        http://stevehanov.ca/blog/index.php?id=132"
   {:author "Peter Taoussanis"}
-  (:require [taoensso.carmine          :as car])
+  (:require [cloure.string             :as str]
+            [taoensso.carmine          :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
-;; TODO Arbitrary per-test config inheritence (via namespaces?)
+;; TODO Arbitrary per-test config inheritence
+;;      (via namespaces? :test-profiles? with-test-config?)
 
 ;;;; Config & bindings
 
@@ -242,3 +244,23 @@
 
   (with-test-subject "user1403"
     (mab-commit! :my-app/landing.buttons.sign-up 1)))
+
+;;;; Admin
+
+(defn- test-tkeys [test-name]
+  (when test-name (wcar (car/keys (tkey test-name "*")))))
+
+(defn delete-test [test-name]
+  (when-let [tkeys (seq (test-tkeys test-name))]
+    (wcar (apply car/del tkeys))))
+
+(defn rename-test [old-name new-name]
+  (when-let [old-tkeys (seq (test-tkeys old-name))]
+    (let [new-tkeys (map #(str/replace % (re-pattern (str "^" (tkey old-name)))
+                                       (tkey new-name)) old-tkeys)]
+      (wcar (doall (map car/renamenx old-tkeys new-tkeys))))))
+
+(comment (test-tkeys  :my-app/landing.buttons.sign-up)
+         (delete-test :my-app/landing.buttons.sign-up)
+         (rename-test :my-app/landing.buttons.sign-up :my-app/foobar)
+         (rename-test :my-app/foobar :my-app/landing.buttons.sign-up))
