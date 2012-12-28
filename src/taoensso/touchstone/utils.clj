@@ -1,5 +1,14 @@
 (ns taoensso.touchstone.utils
-  {:author "Peter Taoussanis"})
+  {:author "Peter Taoussanis"}
+  (:require [clojure.tools.macro :as macro]))
+
+(defmacro defonce*
+  "Like `clojure.core/defonce` but supports optional docstring and attributes
+  map for name symbol."
+  {:arglists '([name expr])}
+  [name & sigs]
+  (let [[name [expr]] (macro/name-with-attributes name sigs)]
+    `(clojure.core/defonce ~name ~expr)))
 
 (defmacro delay-map
   "Like `hash-map` but wraps every value form in a delay.

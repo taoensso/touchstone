@@ -22,10 +22,9 @@
 
 ;;;; Config & bindings
 
-(defonce config
-  ^{:doc
-    "This map atom controls everything about the way Touchstone operates.
-     See source code for details."}
+(utils/defonce* config
+  "This map atom controls everything about the way Touchstone operates.
+  See source code for details."
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
