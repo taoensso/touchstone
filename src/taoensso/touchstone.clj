@@ -120,11 +120,23 @@
                   :my-form-1 \"String 1\"
                   :my-form-2 (mab-select :my-test-1a ...))
 
-  Test forms can be freely added or removed from an ongoing test at any time,
-  but avoid changing forms once named."
+  Test forms can be freely added, reordered, or removed for an ongoing test at
+  any time, but avoid changing a particular form once named."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
   `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
+
+(defmacro mab-select-ordered
+  "Like `mab-select` but automatically names testing forms by their given order:
+  :form-1, :form-2, ....
+
+  Test forms can be freely added, but NOT reordered or removed for an ongoing
+  test."
+  [test-name & ordered-forms]
+  (let [name-form-pairs (interleave (map #(keyword (str "form-" %)) (range))
+                                    ordered-forms)]
+    ;;`(println ~test-name ~@name-form-pairs)
+    `(mab-select ~test-name ~@name-form-pairs)))
 
 (defn mab-select*
   [test-name delayed-forms-map]
