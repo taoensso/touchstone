@@ -12,8 +12,9 @@
        http://en.wikipedia.org/wiki/Multi-armed_bandit
        http://stevehanov.ca/blog/index.php?id=132"
   {:author "Peter Taoussanis"}
-  (:require [clojure.string            :as str]
-            [taoensso.carmine          :as car])
+  (:require [clojure.string             :as str]
+            [clojure.math.combinatorics :as combo]
+            [taoensso.carmine           :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
 ;;;; TODO
@@ -137,6 +138,31 @@
                                     ordered-forms)]
     ;;`(println ~test-name ~@name-form-pairs)
     `(mab-select ~test-name ~@name-form-pairs)))
+
+(defmacro mab-select-permutations
+  "Advanced. Defines a MAB test with every vector permutation of testing forms,
+  each automatically named by the given order of its constituent forms."
+  [test-name & ordered-forms]
+  (assert (<= (count ordered-forms) 4))
+  (let [name-form-pairs
+        (interleave (map #(keyword (str "form-" (str/join "-" %)))
+                         (combo/permutations (range (count ordered-forms))))
+                    (map vec (combo/permutations ordered-forms)))]
+    ;;`(println ~test-name ~@name-form-pairs)
+    `(mab-select ~test-name ~@name-form-pairs)))
+
+(comment
+  (mab-select-ordered
+   :my-ordered-test
+   (do (println :a) :a)
+   (do (println :b) :b)
+   (do (println :c) :c))
+
+  (mab-select-permutations
+   :my-permutations-test
+   (do (println :a) :a)
+   (do (println :b) :b)
+   (do (println :c) :c)))
 
 (defn mab-select*
   [test-name delayed-forms-map]
