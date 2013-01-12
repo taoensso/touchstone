@@ -12,19 +12,20 @@
        http://en.wikipedia.org/wiki/Multi-armed_bandit
        http://stevehanov.ca/blog/index.php?id=132"
   {:author "Peter Taoussanis"}
-  (:require [clojure.string            :as str]
-            [taoensso.carmine          :as car])
+  (:require [clojure.string             :as str]
+            [clojure.math.combinatorics :as combo]
+            [taoensso.carmine           :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
-;; TODO Arbitrary per-test config inheritence
-;;      (via namespaces? :test-profiles? with-test-config?)
+;;;; TODO
+;; * Per-test config inheritence (namespaces? :test-profiles? with-test-config?)
+;; * Test commit & reporting groups?
 
 ;;;; Config & bindings
 
-(defonce config
-  ^{:doc
-    "This map atom controls everything about the way Touchstone operates.
-     See source code for details."}
+(utils/defonce* config
+  "This map atom controls everything about the way Touchstone operates.
+  See source code for details."
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
@@ -115,16 +116,53 @@
                   :my-form-1 \"String 1\"
                   :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
 
-  Dependent tests may be created through composition:
+  Dependent tests can be created through composition:
       (mab-select :my-test-1
                   :my-form-1 \"String 1\"
                   :my-form-2 (mab-select :my-test-1a ...))
 
-  Test forms may be freely added or removed from an ongoing test at any time,
-  but avoid changing forms once named."
+  Test forms can be freely added, reordered, or removed for an ongoing test at
+  any time, but avoid changing a particular form once named."
   [test-name & name-form-pairs]
   ;; To prevent caching of form eval, delay-map is regenerated for each call
   `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
+
+(defmacro mab-select-ordered
+  "Like `mab-select` but automatically names testing forms by their given order:
+  :form-1, :form-2, ....
+
+  Test forms can be freely added, but NOT reordered or removed for an ongoing
+  test."
+  [test-name & ordered-forms]
+  (let [name-form-pairs (interleave (map #(keyword (str "form-" %)) (range))
+                                    ordered-forms)]
+    ;;`(println ~test-name ~@name-form-pairs)
+    `(mab-select ~test-name ~@name-form-pairs)))
+
+(defmacro mab-select-permutations
+  "Advanced. Defines a MAB test with every vector permutation of testing forms,
+  each automatically named by the given order of its constituent forms."
+  [test-name & ordered-forms]
+  (assert (<= (count ordered-forms) 4))
+  (let [name-form-pairs
+        (interleave (map #(keyword (str "form-" (str/join "-" %)))
+                         (combo/permutations (range (count ordered-forms))))
+                    (map vec (combo/permutations ordered-forms)))]
+    ;;`(println ~test-name ~@name-form-pairs)
+    `(mab-select ~test-name ~@name-form-pairs)))
+
+(comment
+  (mab-select-ordered
+   :my-ordered-test
+   (do (println :a) :a)
+   (do (println :b) :b)
+   (do (println :c) :c))
+
+  (mab-select-permutations
+   :my-permutations-test
+   (do (println :a) :a)
+   (do (println :b) :b)
+   (do (println :c) :c)))
 
 (defn mab-select*
   [test-name delayed-forms-map]

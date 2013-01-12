@@ -1,9 +1,11 @@
-(defproject com.taoensso/touchstone "0.8.2"
+(defproject com.taoensso/touchstone "0.9.0"
   :description "Clojure split-testing library"
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"}
-  :dependencies [[org.clojure/clojure  "1.3.0"]
-                 [com.taoensso/carmine "1.1.0"]]
+  :dependencies [[org.clojure/clojure            "1.3.0"]
+                 [org.clojure/tools.macro        "0.1.1"]
+                 [com.taoensso/carmine           "1.1.0"]
+                 [org.clojure/math.combinatorics "0.0.3"]]
   :profiles {:1.3   {:dependencies [[org.clojure/clojure "1.3.0"]]}
              :1.4   {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5   {:dependencies [[org.clojure/clojure "1.5.0-alpha3"]]}

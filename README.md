@@ -16,7 +16,7 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
  * **High flexibility** (variations are *arbitrary Clojure forms*).
  * **Low maintenace** (fire-and-forget, automatic-selection algorithm).
  * Fire-and-forget **multivariate** testing.
- * Support for **advanced techniques** like test composition (dependent tests), arbitrary scoring, engagement testing, etc.
+ * **Advanced capabilities** like test composition (dependent tests), arbitrary scoring, engagement testing, etc.
  * **Ring middleware**.
 
 ## Getting Started
