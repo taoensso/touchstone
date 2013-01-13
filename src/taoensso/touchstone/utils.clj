@@ -10,17 +10,19 @@
   (let [[name [expr]] (macro/name-with-attributes name sigs)]
     `(clojure.core/defonce ~name ~expr)))
 
-(defmacro delay-map
-  "Like `hash-map` but wraps every value form in a delay.
-  Ref. http://goo.gl/5vVs0"
-  [& kvs]
-  (assert (even? (count kvs)))
-  (into {} (for [[k v] (partition 2 kvs)]
-             [k (list `delay v)])))
-
-(comment (delay-map :a (do (println "Get :a value") :A)
-                    :b (do (Thread/sleep 1000)      :B)
-                    :c (do (rand))))
+(defn distinct-by
+  "Like `sort-by` for distinct. Based on clojure.core/distinct."
+  [keyfn coll]
+  (let [step (fn step [xs seen]
+               (lazy-seq
+                ((fn [[f :as xs] seen]
+                   (when-let [s (seq xs)]
+                     (let [keyfn-f (keyfn f)]
+                       (if (contains? seen keyfn-f)
+                         (recur (rest s) seen)
+                         (cons f (step (rest s) (conj seen keyfn-f)))))))
+                 xs seen)))]
+    (step coll #{})))
 
 (defn memoize-ttl
   "Like `memoize` but invalidates the cache for a set of arguments after TTL

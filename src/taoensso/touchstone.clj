@@ -18,14 +18,19 @@
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
 ;;;; TODO
-;; * Per-test config inheritence (namespaces? :test-profiles? with-test-config?)
+;; * Per-test config inheritence (namespaces? :test-profiles?
+;;   with-test-config?). Bindings are ugly since they need to happen (in sync)
+;;   for both selects and commits.
 ;; * Test commit & reporting groups?
 
 ;;;; Config & bindings
 
 (utils/defonce* config
   "This map atom controls everything about the way Touchstone operates.
-  See source code for details."
+  See source code for details.
+
+  WARNING: I'm not happy with how per-test config works, this is very likely
+  to be changed soon!"
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
@@ -124,8 +129,9 @@
   Test forms can be freely added, reordered, or removed for an ongoing test at
   any time, but avoid changing a particular form once named."
   [test-name & name-form-pairs]
-  ;; To prevent caching of form eval, delay-map is regenerated for each call
-  `(mab-select* ~test-name (utils/delay-map ~@name-form-pairs)))
+  (let [name-form-fn-pairs (into {} (for [[n f] (partition 2 name-form-pairs)]
+                                      [n (list 'fn [] f)]))]
+    `(mab-select* ~test-name ~name-form-fn-pairs)))
 
 (defmacro mab-select-ordered
   "Like `mab-select` but automatically names testing forms by their given order:
@@ -134,42 +140,53 @@
   Test forms can be freely added, but NOT reordered or removed for an ongoing
   test."
   [test-name & ordered-forms]
-  (let [name-form-pairs (interleave (map #(keyword (str "form-" %)) (range))
-                                    ordered-forms)]
-    ;;`(println ~test-name ~@name-form-pairs)
-    `(mab-select ~test-name ~@name-form-pairs)))
-
-(defmacro mab-select-permutations
-  "Advanced. Defines a MAB test with every vector permutation of testing forms,
-  each automatically named by the given order of its constituent forms."
-  [test-name & ordered-forms]
-  (assert (<= (count ordered-forms) 4))
-  (let [name-form-pairs
-        (interleave (map #(keyword (str "form-" (str/join "-" %)))
-                         (combo/permutations (range (count ordered-forms))))
-                    (map vec (combo/permutations ordered-forms)))]
-    ;;`(println ~test-name ~@name-form-pairs)
-    `(mab-select ~test-name ~@name-form-pairs)))
+  (let [names (map #(keyword (str "form-" %)) (range))
+        pairs (interleave names ordered-forms)]
+    ;;`(println ~test-name ~@pairs)
+    `(mab-select ~test-name ~@pairs)))
 
 (comment
   (mab-select-ordered
    :my-ordered-test
    (do (println :a) :a)
    (do (println :b) :b)
-   (do (println :c) :c))
+   (do (println :c) :c)))
 
+(defmacro mab-select-permutations
+  "Advanced. Defines a positional MAB test with N!/(N-n)! testing forms. Each
+  testing form will be a vector permutation of the given `ordered-forms`,
+  automatically named for the order of its constituent forms.
+
+  Useful for testing the order of the first n forms out of N. The remaining
+  forms will retain their natural order."
+  [test-name take-n & ordered-forms]
+  (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
+    (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
+  (let [take-n (if-not take-n identity
+                       (partial distinct-by (partial take take-n)))
+
+        permutations (map vec (take-n (combo/permutations ordered-forms)))
+        names        (map #(keyword (str "form-" (str/join "-" %)))
+                          (take-n (combo/permutations
+                                   (range (count ordered-forms)))))
+
+        pairs (interleave names permutations)]
+    ;;`(println ~test-name ~@pairs)
+    `(mab-select ~test-name ~@pairs)))
+
+(comment
   (mab-select-permutations
-   :my-permutations-test
+   :my-permutations-test 1
    (do (println :a) :a)
    (do (println :b) :b)
    (do (println :c) :c)))
 
 (defn mab-select*
-  [test-name delayed-forms-map]
+  [test-name form-fns-map]
   (let [valid-form?  (fn [form-name] (and form-name
-                                         (contains? delayed-forms-map form-name)))
-        get-form     (fn [form-name] (force (get delayed-forms-map form-name)))
-        leading-form (delay (ucb1-select test-name (keys delayed-forms-map)))]
+                                         (contains? form-fns-map form-name)))
+        get-form     (fn [form-name] ((get form-fns-map form-name)))
+        leading-form (delay (ucb1-select test-name (keys form-fns-map)))]
 
     (if-not *mab-subject-id*
       (get-form @leading-form) ; Return leading form and do nothing else
@@ -200,10 +217,10 @@
           (select-form! prior-selected-form-name)
           (select-form! @leading-form))))))
 
-(comment (mab-select :my-app/landing.buttons.sign-up
-                     :sign-up  "Sign-up!"
-                     :join     "Join!"
-                     :join-now "Join now!"))
+(comment ((mab-select :my-app/landing.buttons.sign-up
+                      :sign-up  "Sign-up!"
+                      :join     "Join!"
+                      :join-now "Join now!")))
 
 (defn selected-form-name
   "Returns subject's currently selected form name for test, or nil. One common
@@ -289,10 +306,10 @@
   (with-test-subject "user1403"
     (mab-select
      :my-app/landing.buttons.sign-up
-     :red    "Red button"
-     :blue   "Blue button"
-     :green  "Green button"
-     :yellow "Yellow button"))
+     :red    (do (println "RED")    "Red button")
+     :blue   (do (println "BLUE")   "Blue button")
+     :green  (do (println "GREEN")  "Green button")
+     :yellow (do (println "YELLOW") "Yellow button")))
 
   (with-test-subject "user1403"
     (mab-commit! :my-app/landing.buttons.sign-up 1)))
