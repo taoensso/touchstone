@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.10.0"]
+[com.taoensso/touchstone "0.10.1"]
 ```
 
 # Touchstone, a Clojure split-testing library
@@ -26,7 +26,7 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 Depend on Touchstone in your `project.clj`:
 
 ```clojure
-[com.taoensso/touchstone "0.10.0"]
+[com.taoensso/touchstone "0.10.1"]
 ```
 
 and `require` the library:

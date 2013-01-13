@@ -163,7 +163,7 @@
   (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
     (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
   (let [take-n (if-not take-n identity
-                       (partial distinct-by (partial take take-n)))
+                       (partial utils/distinct-by (partial take take-n)))
 
         permutations (map vec (take-n (combo/permutations ordered-forms)))
         names        (map #(keyword (str "form-" (str/join "-" %)))
