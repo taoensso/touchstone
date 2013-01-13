@@ -139,10 +139,10 @@
   Test forms can be freely added, but NOT reordered or removed for an ongoing
   test."
   [test-name & ordered-forms]
-  (let [name-form-pairs (interleave (map #(keyword (str "form-" %)) (range))
-                                    ordered-forms)]
-    ;;`(println ~test-name ~@name-form-pairs)
-    `(mab-select ~test-name ~@name-form-pairs)))
+  (let [names (map #(keyword (str "form-" %)) (range))
+        pairs (interleave names ordered-forms)]
+    ;;`(println ~test-name ~@pairs)
+    `(mab-select ~test-name ~@pairs)))
 
 (comment
   (mab-select-ordered
@@ -152,20 +152,30 @@
    (do (println :c) :c)))
 
 (defmacro mab-select-permutations
-  "Advanced. Defines a MAB test with every vector permutation of testing forms,
-  each automatically named by the given order of its constituent forms."
-  [test-name & ordered-forms]
-  (assert (<= (count ordered-forms) 4)) ; O(n!) kills puppies
-  (let [name-form-pairs
-        (interleave (map #(keyword (str "form-" (str/join "-" %)))
-                         (combo/permutations (range (count ordered-forms))))
-                    (map vec (combo/permutations ordered-forms)))]
-    ;;`(println ~test-name ~@name-form-pairs)
-    `(mab-select ~test-name ~@name-form-pairs)))
+  "Advanced. Defines a positional MAB test with N!/(N-n)! testing forms. Each
+  testing form will be a vector permutation of the given `ordered-forms`,
+  automatically named for the order of its constituent forms.
+
+  Useful for testing the order of the first n forms out of N. The remaining
+  forms will retain their natural order."
+  [test-name take-n & ordered-forms]
+  (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
+    (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
+  (let [take-n (if-not take-n identity
+                       (partial distinct-by (partial take take-n)))
+
+        permutations (map vec (take-n (combo/permutations ordered-forms)))
+        names        (map #(keyword (str "form-" (str/join "-" %)))
+                          (take-n (combo/permutations
+                                   (range (count ordered-forms)))))
+
+        pairs (interleave names permutations)]
+    ;;`(println ~test-name ~@pairs)
+    `(mab-select ~test-name ~@pairs)))
 
 (comment
   (mab-select-permutations
-   :my-permutations-test
+   :my-permutations-test 1
    (do (println :a) :a)
    (do (println :b) :b)
    (do (println :c) :c)))
