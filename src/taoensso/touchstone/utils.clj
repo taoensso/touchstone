@@ -10,18 +10,6 @@
   (let [[name [expr]] (macro/name-with-attributes name sigs)]
     `(clojure.core/defonce ~name ~expr)))
 
-(defmacro delay-map
-  "Like `hash-map` but wraps every value form in a delay.
-  Ref. http://goo.gl/5vVs0"
-  [& kvs]
-  (assert (even? (count kvs)))
-  (into {} (for [[k v] (partition 2 kvs)]
-             [k (list `delay v)])))
-
-(comment (delay-map :a (do (println "Get :a value") :A)
-                    :b (do (Thread/sleep 1000)      :B)
-                    :c (do (rand))))
-
 (defn distinct-by
   "Like `sort-by` for distinct. Based on clojure.core/distinct."
   [keyfn coll]
