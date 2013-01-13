@@ -18,14 +18,19 @@
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
 ;;;; TODO
-;; * Per-test config inheritence (namespaces? :test-profiles? with-test-config?)
+;; * Per-test config inheritence (namespaces? :test-profiles?
+;;   with-test-config?). Bindings are ugly since they need to happen (in sync)
+;;   for both selects and commits.
 ;; * Test commit & reporting groups?
 
 ;;;; Config & bindings
 
 (utils/defonce* config
   "This map atom controls everything about the way Touchstone operates.
-  See source code for details."
+  See source code for details.
+
+  WARNING: I'm not happy with how per-test config works, this is very likely
+  to be changed soon!"
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
@@ -139,11 +144,18 @@
     ;;`(println ~test-name ~@name-form-pairs)
     `(mab-select ~test-name ~@name-form-pairs)))
 
+(comment
+  (mab-select-ordered
+   :my-ordered-test
+   (do (println :a) :a)
+   (do (println :b) :b)
+   (do (println :c) :c)))
+
 (defmacro mab-select-permutations
   "Advanced. Defines a MAB test with every vector permutation of testing forms,
   each automatically named by the given order of its constituent forms."
   [test-name & ordered-forms]
-  (assert (<= (count ordered-forms) 4))
+  (assert (<= (count ordered-forms) 4)) ; O(n!) kills puppies
   (let [name-form-pairs
         (interleave (map #(keyword (str "form-" (str/join "-" %)))
                          (combo/permutations (range (count ordered-forms))))
@@ -152,12 +164,6 @@
     `(mab-select ~test-name ~@name-form-pairs)))
 
 (comment
-  (mab-select-ordered
-   :my-ordered-test
-   (do (println :a) :a)
-   (do (println :b) :b)
-   (do (println :c) :c))
-
   (mab-select-permutations
    :my-permutations-test
    (do (println :a) :a)
