@@ -133,24 +133,23 @@
                                       [n (list 'fn [] f)]))]
     `(mab-select* ~test-name ~name-form-fn-pairs)))
 
-(defmacro mab-select-ordered
-  "Like `mab-select` but automatically names testing forms by their given order:
-  :form-1, :form-2, ....
+(defmacro mab-select-name
+  "Like `mab-select` but takes only form names and uses names as forms."
+  [test-name & names]
+  (let [pairs (interleave names names)]
+    `(mab-select ~test-name ~@pairs)))
 
-  Test forms can be freely added, but NOT reordered or removed for an ongoing
-  test."
+(comment (mab-select-name :my-name-test :a :b :c))
+
+(defmacro mab-select-ordered
+  "Like `mab-select` but takes unnamed forms and automatically names them by
+  their order: :form-1, :form-2, ...."
   [test-name & ordered-forms]
   (let [names (map #(keyword (str "form-" %)) (range))
         pairs (interleave names ordered-forms)]
-    ;;`(println ~test-name ~@pairs)
     `(mab-select ~test-name ~@pairs)))
 
-(comment
-  (mab-select-ordered
-   :my-ordered-test
-   (do (println :a) :a)
-   (do (println :b) :b)
-   (do (println :c) :c)))
+(comment (mab-select-ordered :my-ordered-test :a :b :c))
 
 (defmacro mab-select-permutations
   "Advanced. Defines a positional MAB test with N!/(N-n)! testing forms. Each
@@ -174,12 +173,7 @@
     ;;`(println ~test-name ~@pairs)
     `(mab-select ~test-name ~@pairs)))
 
-(comment
-  (mab-select-permutations
-   :my-permutations-test 1
-   (do (println :a) :a)
-   (do (println :b) :b)
-   (do (println :c) :c)))
+(comment (mab-select-permutations :my-permutations-test 1 :a :b :c))
 
 (defn mab-select*
   [test-name form-fns-map]
