@@ -133,6 +133,14 @@
                                       [n (list 'fn [] f)]))]
     `(mab-select* ~test-name ~name-form-fn-pairs)))
 
+(defmacro mab-select-name
+  "Like `mab-select` but takes only form names and uses names as forms."
+  [test-name & names]
+  (let [pairs (interleave names names)]
+    `(mab-select ~test-name ~@pairs)))
+
+(comment (mab-select-name :my-name-test :variation1 :variation2 :variation3))
+
 (defmacro mab-select-ordered
   "Like `mab-select` but automatically names testing forms by their given order:
   :form-1, :form-2, ....
