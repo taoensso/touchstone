@@ -112,6 +112,10 @@
    (fn [test-name form-names]
      (last (sort-by #(ucb1-score test-name %) form-names)))))
 
+(defn- fn-map [kvs]
+  (assert (even? (count kvs)))
+  (into {} (for [[k v] (partition 2 kvs)] [k (list 'fn [] v)])))
+
 (declare mab-select*)
 
 (defmacro mab-select
@@ -129,12 +133,19 @@
   Test forms can be freely added, reordered, or removed for an ongoing test at
   any time, but avoid changing a particular form once named."
   [test-name & name-form-pairs]
-  (let [name-form-fn-pairs (into {} (for [[n f] (partition 2 name-form-pairs)]
-                                      [n (list 'fn [] f)]))]
+  (let [name-form-fn-pairs (fn-map name-form-pairs)]
     `(mab-select* ~test-name ~name-form-fn-pairs)))
 
+(defmacro ab-select
+  "Like `mab-select` but uses simple, A/B-style random selection. Unless you
+  know all the implications, you probably want `mab-select` instead."
+  [test-name & name-form-pairs]
+  (let [name-form-fn-pairs (fn-map name-form-pairs)]
+    `(mab-select* ~test-name ~name-form-fn-pairs true)))
+
 (defmacro mab-select-name
-  "Like `mab-select` but takes only form names and uses names as forms."
+  "Like `mab-select` but takes only form names and uses each name also as its
+  form."
   [test-name & names]
   (let [pairs (interleave names names)]
     `(mab-select ~test-name ~@pairs)))
@@ -176,11 +187,14 @@
 (comment (mab-select-permutations :my-permutations-test 1 :a :b :c))
 
 (defn mab-select*
-  [test-name form-fns-map]
+  [test-name form-fns-map & [random-selection?]]
   (let [valid-form?  (fn [form-name] (and form-name
                                          (contains? form-fns-map form-name)))
         get-form     (fn [form-name] ((get form-fns-map form-name)))
-        leading-form (delay (ucb1-select test-name (keys form-fns-map)))]
+        leading-form (delay (let [forms (keys form-fns-map)]
+                              (if random-selection?
+                                (rand-nth forms) ; Simple A/B-style selection
+                                (ucb1-select test-name forms))))]
 
     (if-not *mab-subject-id*
       (get-form @leading-form) ; Return leading form and do nothing else
