@@ -144,7 +144,8 @@
     `(mab-select* ~test-name ~name-form-fn-pairs true)))
 
 (defmacro mab-select-name
-  "Like `mab-select` but takes only form names and uses names as forms."
+  "Like `mab-select` but takes only form names and uses each name also as its
+  form."
   [test-name & names]
   (let [pairs (interleave names names)]
     `(mab-select ~test-name ~@pairs)))
