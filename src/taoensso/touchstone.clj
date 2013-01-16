@@ -65,7 +65,7 @@
 
 (declare ucb1-select)
 
-(defn mab-select*
+(defn- mab-select*
   [test-name form-fns-map & [simple-random-selection?]]
   (let [valid-form?  (fn [form-name] (and form-name
                                          (contains? form-fns-map form-name)))
@@ -124,7 +124,7 @@
   any time, but avoid changing a particular form once named."
   [test-name & name-form-pairs]
   (let [name-form-fn-pairs (fn-map name-form-pairs)]
-    `(mab-select* ~test-name ~name-form-fn-pairs)))
+    `(#'mab-select* ~test-name ~name-form-fn-pairs)))
 
 (comment ((mab-select :my-app/landing.buttons.sign-up
                       :sign-up  "Sign-up!"
@@ -136,7 +136,7 @@
   know all the implications, you probably want `mab-select` instead."
   [test-name & name-form-pairs]
   (let [name-form-fn-pairs (fn-map name-form-pairs)]
-    `(mab-select* ~test-name ~name-form-fn-pairs true)))
+    `(#'mab-select* ~test-name ~name-form-fn-pairs true)))
 
 (defn selected-form-name
   "Returns subject's currently selected form name for test, or nil. One common
