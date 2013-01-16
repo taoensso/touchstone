@@ -29,8 +29,7 @@
   "This map atom controls everything about the way Touchstone operates.
   See source code for details.
 
-  WARNING: I'm not happy with how per-test config works, this is very likely
-  to be changed soon!"
+  WARNING: per-test config API very likely to change before 1.x release."
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
@@ -51,6 +50,9 @@
   `(let [{pool# :pool spec# :spec} (@config :carmine)]
      (car/with-conn pool# spec# ~@body)))
 
+(def ^:private tkey "Prefixed Touchstone key"
+  (memoize (car/make-keyfn "touchstone")))
+
 (def ^:dynamic *mab-subject-id* nil)
 
 (defmacro with-test-subject
@@ -59,141 +61,18 @@
   participate in split-testing (useful for staff/bot web requests, etc.)."
   [id & body] `(binding [*mab-subject-id* (str ~id)] ~@body))
 
-;;;; Selects & commits
+;;;; Basic form selection
 
-(def ^:private tkey "Prefixed Touchstone key"
-  (memoize (car/make-keyfn "touchstone")))
-
-(declare ucb1-score*)
-
-(defn- ucb1-score
-  "Uses \"UCB1\" formula to score a named MAB test form for selection sorting.
-
-  UCB1 MAB provides a number of nice properties including:
-    * Fire-and-forget capability.
-    * Fast and accurate convergence.
-    * Resilience to confounding factors over time.
-    * Support for test-form hot-swapping.
-    * Support for multivariate testing.
-
-  Formula motivation: we want untested forms to be selected first and, more
-  generally, the frequency of exploration to be inversly proportional to our
-  confidence in the superiority of the leading form. This implies confidence in
-  both relevant sample sizes, as well as the statistical significance of the
-  difference between observed form scores."
-  [test-name form-name]
-  (let [[nprospects-map score]
-        (wcar (car/hgetall* (tkey test-name "nprospects"))
-              (car/hget     (tkey test-name "scores") (scoped-name form-name)))
-
-        score       (or (car/as-double score) 0)
-        nprospects  (car/as-long (get nprospects-map (scoped-name form-name) 0))
-        nprosps-sum (reduce + (map car/as-long (vals nprospects-map)))]
-    (ucb1-score* nprosps-sum nprospects score)))
-
-(defn- ucb1-score* [N n score]
-  (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
-
-(comment
-  (defn- ucb1-conf [N n mean] (- (ucb1-score* N n (* n mean)) mean))
-  (ucb1-conf 10  5    0.5) ; Ref 0.9595
-  (ucb1-conf 400 200  0.5) ; Ref 0.2448
-  (ucb1-conf 400 200 -0.5) ; Ref 0.2448
-
-  ;; Always select untested forms:
-  (ucb1-conf 100 0 0) ; Ref 3.0349
-  (ucb1-conf 100 2 0) ; Ref 2.1460
-  (ucb1-conf 100 5 0) ; Ref 1.3572
-  )
-
-(def ^:private ucb1-select
-  "Returns name of the given form with highest current \"UCB1\" score."
-  (utils/memoize-ttl 5000 ; 5s cache for performance
-   (fn [test-name form-names]
-     (last (sort-by #(ucb1-score test-name %) form-names)))))
-
-(defn- fn-map [kvs]
-  (assert (even? (count kvs)))
-  (into {} (for [[k v] (partition 2 kvs)] [k (list 'fn [] v)])))
-
-(declare mab-select*)
-
-(defmacro mab-select
-  "Defines a named MAB test that selects and evaluates one of the named testing
-  forms using the \"UCB1\" selection algorithm:
-      (mab-select :my-test-1
-                  :my-form-1 \"String 1\"
-                  :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
-
-  Dependent tests can be created through composition:
-      (mab-select :my-test-1
-                  :my-form-1 \"String 1\"
-                  :my-form-2 (mab-select :my-test-1a ...))
-
-  Test forms can be freely added, reordered, or removed for an ongoing test at
-  any time, but avoid changing a particular form once named."
-  [test-name & name-form-pairs]
-  (let [name-form-fn-pairs (fn-map name-form-pairs)]
-    `(mab-select* ~test-name ~name-form-fn-pairs)))
-
-(defmacro ab-select
-  "Like `mab-select` but uses simple, A/B-style random selection. Unless you
-  know all the implications, you probably want `mab-select` instead."
-  [test-name & name-form-pairs]
-  (let [name-form-fn-pairs (fn-map name-form-pairs)]
-    `(mab-select* ~test-name ~name-form-fn-pairs true)))
-
-(defmacro mab-select-name
-  "Like `mab-select` but takes only form names and uses each name also as its
-  form."
-  [test-name & names]
-  (let [pairs (interleave names names)]
-    `(mab-select ~test-name ~@pairs)))
-
-(comment (mab-select-name :my-name-test :a :b :c))
-
-(defmacro mab-select-ordered
-  "Like `mab-select` but takes unnamed forms and automatically names them by
-  their order: :form-1, :form-2, ...."
-  [test-name & ordered-forms]
-  (let [names (map #(keyword (str "form-" %)) (range))
-        pairs (interleave names ordered-forms)]
-    `(mab-select ~test-name ~@pairs)))
-
-(comment (mab-select-ordered :my-ordered-test :a :b :c))
-
-(defmacro mab-select-permutations
-  "Advanced. Defines a positional MAB test with N!/(N-n)! testing forms. Each
-  testing form will be a vector permutation of the given `ordered-forms`,
-  automatically named for the order of its constituent forms.
-
-  Useful for testing the order of the first n forms out of N. The remaining
-  forms will retain their natural order."
-  [test-name take-n & ordered-forms]
-  (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
-    (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
-  (let [take-n (if-not take-n identity
-                       (partial utils/distinct-by (partial take take-n)))
-
-        permutations (map vec (take-n (combo/permutations ordered-forms)))
-        names        (map #(keyword (str "form-" (str/join "-" %)))
-                          (take-n (combo/permutations
-                                   (range (count ordered-forms)))))
-
-        pairs (interleave names permutations)]
-    ;;`(println ~test-name ~@pairs)
-    `(mab-select ~test-name ~@pairs)))
-
-(comment (mab-select-permutations :my-permutations-test 1 :a :b :c))
+(declare ucb1-select)
 
 (defn mab-select*
-  [test-name form-fns-map & [random-selection?]]
+  [test-name form-fns-map & [simple-random-selection?]]
   (let [valid-form?  (fn [form-name] (and form-name
                                          (contains? form-fns-map form-name)))
         get-form     (fn [form-name] ((get form-fns-map form-name)))
         leading-form (delay (let [forms (keys form-fns-map)]
-                              (if random-selection?
-                                (rand-nth forms) ; Simple A/B-style selection
+                              (if simple-random-selection?
+                                (rand-nth forms) ; A/B style
                                 (ucb1-select test-name forms))))]
 
     (if-not *mab-subject-id*
@@ -225,10 +104,39 @@
           (select-form! prior-selected-form-name)
           (select-form! @leading-form))))))
 
+(defn- fn-map [kvs]
+  (assert (even? (count kvs)))
+  (into {} (for [[k v] (partition 2 kvs)] [k (list 'fn [] v)])))
+
+(defmacro mab-select
+  "Defines a named MAB test that selects and evaluates one of the named testing
+  forms using the \"UCB1\" selection algorithm:
+      (mab-select :my-test-1
+                  :my-form-1 \"String 1\"
+                  :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
+
+  Dependent tests can be created through composition:
+      (mab-select :my-test-1
+                  :my-form-1 \"String 1\"
+                  :my-form-2 (mab-select :my-test-1a ...))
+
+  Test forms can be freely added, reordered, or removed for an ongoing test at
+  any time, but avoid changing a particular form once named."
+  [test-name & name-form-pairs]
+  (let [name-form-fn-pairs (fn-map name-form-pairs)]
+    `(mab-select* ~test-name ~name-form-fn-pairs)))
+
 (comment ((mab-select :my-app/landing.buttons.sign-up
                       :sign-up  "Sign-up!"
                       :join     "Join!"
                       :join-now "Join now!")))
+
+(defmacro ab-select
+  "Like `mab-select` but uses simple, A/B-style random selection. Unless you
+  know all the implications, you probably want `mab-select` instead."
+  [test-name & name-form-pairs]
+  (let [name-form-fn-pairs (fn-map name-form-pairs)]
+    `(mab-select* ~test-name ~name-form-fn-pairs true)))
 
 (defn selected-form-name
   "Returns subject's currently selected form name for test, or nil. One common
@@ -242,6 +150,56 @@
                                 "selection")))))
 
 (comment (selected-form-name :my-app/landing.buttons.sign-up "user1403"))
+
+;;;; UCB1 voodoo
+
+(defn- ucb1-score* [N n score]
+  (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
+
+(defn- ucb1-score
+  "Uses \"UCB1\" formula to score a named MAB test form for selection sorting.
+
+  UCB1 MAB provides a number of nice properties including:
+    * Fire-and-forget capability.
+    * Fast and accurate convergence.
+    * Resilience to confounding factors over time.
+    * Support for test-form hot-swapping.
+    * Support for multivariate testing.
+
+  Formula motivation: we want untested forms to be selected first and, more
+  generally, the frequency of exploration to be inversly proportional to our
+  confidence in the superiority of the leading form. This implies confidence in
+  both relevant sample sizes, as well as the statistical significance of the
+  difference between observed form scores."
+  [test-name form-name]
+  (let [[nprospects-map score]
+        (wcar (car/hgetall* (tkey test-name "nprospects"))
+              (car/hget     (tkey test-name "scores") (scoped-name form-name)))
+
+        score       (or (car/as-double score) 0)
+        nprospects  (car/as-long (get nprospects-map (scoped-name form-name) 0))
+        nprosps-sum (reduce + (map car/as-long (vals nprospects-map)))]
+    (ucb1-score* nprosps-sum nprospects score)))
+
+(comment
+  (defn- ucb1-conf [N n mean] (- (ucb1-score* N n (* n mean)) mean))
+  (ucb1-conf 10  5    0.5) ; Ref 0.9595
+  (ucb1-conf 400 200  0.5) ; Ref 0.2448
+  (ucb1-conf 400 200 -0.5) ; Ref 0.2448
+
+  ;; Always select untested forms:
+  (ucb1-conf 100 0 0) ; Ref 3.0349
+  (ucb1-conf 100 2 0) ; Ref 2.1460
+  (ucb1-conf 100 5 0) ; Ref 1.3572
+  )
+
+(def ^:private ucb1-select
+  "Returns name of the given form with highest current \"UCB1\" score."
+  (utils/memoize-ttl 5000 ; 5s cache for performance
+   (fn [test-name form-names]
+     (last (sort-by #(ucb1-score test-name %) form-names)))))
+
+;;;; Commits
 
 (defn mab-commit!
   "Indicates the occurrence of one or more events, each of which may contribute
@@ -321,6 +279,51 @@
 
   (with-test-subject "user1403"
     (mab-commit! :my-app/landing.buttons.sign-up 1)))
+
+;;;; Selection wrappers
+
+(defmacro mab-select-name
+  "Like `mab-select` but takes only form names and uses each name also as its
+  form."
+  [test-name & names]
+  (let [pairs (interleave names names)]
+    `(mab-select ~test-name ~@pairs)))
+
+(comment (mab-select-name :my-name-test :a :b :c))
+
+(defmacro mab-select-ordered
+  "Like `mab-select` but takes unnamed forms and automatically names them by
+  their order: :form-1, :form-2, ...."
+  [test-name & ordered-forms]
+  (let [names (map #(keyword (str "form-" %)) (range))
+        pairs (interleave names ordered-forms)]
+    `(mab-select ~test-name ~@pairs)))
+
+(comment (mab-select-ordered :my-ordered-test :a :b :c))
+
+(defmacro mab-select-permutations
+  "Advanced. Defines a positional MAB test with N!/(N-n)! testing forms. Each
+  testing form will be a vector permutation of the given `ordered-forms`,
+  automatically named for the order of its constituent forms.
+
+  Useful for testing the order of the first n forms out of N. The remaining
+  forms will retain their natural order."
+  [test-name take-n & ordered-forms]
+  (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
+    (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
+  (let [take-n (if-not take-n identity
+                       (partial utils/distinct-by (partial take take-n)))
+
+        permutations (map vec (take-n (combo/permutations ordered-forms)))
+        names        (map #(keyword (str "form-" (str/join "-" %)))
+                          (take-n (combo/permutations
+                                   (range (count ordered-forms)))))
+
+        pairs (interleave names permutations)]
+    ;;`(println ~test-name ~@pairs)
+    `(mab-select ~test-name ~@pairs)))
+
+(comment (mab-select-permutations :my-permutations-test 1 :a :b :c))
 
 ;;;; Admin
 
