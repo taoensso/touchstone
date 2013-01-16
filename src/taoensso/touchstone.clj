@@ -61,19 +61,14 @@
   participate in split-testing (useful for staff/bot web requests, etc.)."
   [id & body] `(binding [*mab-subject-id* (str ~id)] ~@body))
 
-;;;; Basic form selection
+;;;; Low-level form selection
 
-(declare ucb1-select)
-
-(defn- mab-select*
-  [test-name form-fns-map & [simple-random-selection?]]
+(defn- select-form!*
+  [strategy-fn test-name form-fns-map]
   (let [valid-form?  (fn [form-name] (and form-name
                                          (contains? form-fns-map form-name)))
         get-form     (fn [form-name] ((get form-fns-map form-name)))
-        leading-form (delay (let [forms (keys form-fns-map)]
-                              (if simple-random-selection?
-                                (rand-nth forms) ; A/B style
-                                (ucb1-select test-name forms))))]
+        leading-form (delay (strategy-fn test-name (keys form-fns-map)))]
 
     (if-not *mab-subject-id*
       (get-form @leading-form) ; Return leading form and do nothing else
@@ -104,39 +99,12 @@
           (select-form! prior-selected-form-name)
           (select-form! @leading-form))))))
 
-(defn- fn-map [kvs]
-  (assert (even? (count kvs)))
-  (into {} (for [[k v] (partition 2 kvs)] [k (list 'fn [] v)])))
-
-(defmacro mab-select
-  "Defines a named MAB test that selects and evaluates one of the named testing
-  forms using the \"UCB1\" selection algorithm:
-      (mab-select :my-test-1
-                  :my-form-1 \"String 1\"
-                  :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
-
-  Dependent tests can be created through composition:
-      (mab-select :my-test-1
-                  :my-form-1 \"String 1\"
-                  :my-form-2 (mab-select :my-test-1a ...))
-
-  Test forms can be freely added, reordered, or removed for an ongoing test at
-  any time, but avoid changing a particular form once named."
-  [test-name & name-form-pairs]
-  (let [name-form-fn-pairs (fn-map name-form-pairs)]
-    `(#'mab-select* ~test-name ~name-form-fn-pairs)))
-
-(comment ((mab-select :my-app/landing.buttons.sign-up
-                      :sign-up  "Sign-up!"
-                      :join     "Join!"
-                      :join-now "Join now!")))
-
-(defmacro ab-select
-  "Like `mab-select` but uses simple, A/B-style random selection. Unless you
-  know all the implications, you probably want `mab-select` instead."
-  [test-name & name-form-pairs]
-  (let [name-form-fn-pairs (fn-map name-form-pairs)]
-    `(#'mab-select* ~test-name ~name-form-fn-pairs true)))
+(defmacro select-form!
+  [strategy-fn test-name name-form-pairs]
+  (assert (even? (count name-form-pairs)))
+  (let [name-form-fn-pairs (into {} (for [[n f] (partition 2 name-form-pairs)]
+                                      [n (list 'fn [] f)]))]
+    `(#'select-form!* ~strategy-fn ~test-name ~name-form-fn-pairs)))
 
 (defn selected-form-name
   "Returns subject's currently selected form name for test, or nil. One common
@@ -151,7 +119,11 @@
 
 (comment (selected-form-name :my-app/landing.buttons.sign-up "user1403"))
 
-;;;; UCB1 voodoo
+;;;; Selection strategies
+
+(defn- random-select
+  "Simple A/B-style random selection."
+  [test-name form-names] (rand-nth form-names))
 
 (defn- ucb1-score* [N n score]
   (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
@@ -281,6 +253,34 @@
     (mab-commit! :my-app/landing.buttons.sign-up 1)))
 
 ;;;; Selection wrappers
+
+(defmacro mab-select
+  "Defines a named MAB test that selects and evaluates one of the named testing
+  forms using the \"UCB1\" selection algorithm:
+      (mab-select :my-test-1
+                  :my-form-1 \"String 1\"
+                  :my-form-2 (do (Thread/sleep 2000) \"String 2\"))
+
+  Dependent tests can be created through composition:
+      (mab-select :my-test-1
+                  :my-form-1 \"String 1\"
+                  :my-form-2 (mab-select :my-test-1a ...))
+
+  Test forms can be freely added, reordered, or removed for an ongoing test at
+  any time, but avoid changing a particular form once named."
+  [test-name & name-form-pairs]
+  `(select-form! #'ucb1-select ~test-name ~name-form-pairs))
+
+(comment (mab-select :my-app/landing.buttons.sign-up
+                     :sign-up  "Sign-up!"
+                     :join     "Join!"
+                     :join-now "Join now!"))
+
+(defmacro ab-select
+  "Like `mab-select` but uses simple, A/B-style random selection. Unless you
+  know all the implications, you probably want `mab-select` instead."
+  [test-name & name-form-pairs]
+  `(select-form! #'random-select ~test-name ~name-form-pairs))
 
 (defmacro mab-select-name
   "Like `mab-select` but takes only form names and uses each name also as its
