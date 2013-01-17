@@ -125,6 +125,14 @@
   "Simple A/B-style random selection."
   [test-name form-names] (rand-nth form-names))
 
+(def ^:private low-n-select
+  "Returns name of a form with lowest number of prospects (possibly zero)."
+  (utils/memoize-ttl 5000
+    (fn [test-name form-names]
+      (let [nprospects-map (wcar (car/hgetall* (tkey test-name "nprospects")))]
+        (first (sort-by #(car/as-long (get nprospects-map (scoped-name %) 0))
+                        form-names))))))
+
 (defn- ucb1-score* [N n score]
   (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
 
