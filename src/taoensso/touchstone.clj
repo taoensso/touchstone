@@ -234,9 +234,11 @@
 
        (println "---")
        (println (str "MAB test " test-name " with " nprosps-sum " total prospects"
-                     " and a cumulative score of " scores-sum ":"))
+                     " and a cumulative score of " scores-sum ", "
+                     "[form-name ucb1-score nprospects score]:"))
        (println (->> (for [form-name (keys nprospects-map)]
-                       [(keyword form-name) (ucb1-score test-name form-name)])
+                       [(keyword form-name) (ucb1-score test-name form-name)
+                        (nprospects-map form-name 0) (scores-map form-name 0)])
                      (sort-by second)
                      reverse))))
   ([test-name & more] (dorun (map pr-mab-results (cons test-name more)))))
