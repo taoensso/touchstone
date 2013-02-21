@@ -52,7 +52,5 @@
          (time (dotimes [_ 10000] (name :foo)))
          (time (dotimes [_ 10000] (scoped-name :foo))))
 
-(defn approx=
-  [x y & {:keys [significance]
-          :or   {significance 0.001}}]
-  (< (- x y) significance))
+(defn approx= [x y & [signf]]
+  (< (Math/abs (double (- x y))) (or signf 0.001)))
