@@ -35,7 +35,7 @@
                            ;; Turn on for engagement testing:
                            :count-duplicate-activity? false}}}))
 
-(defn set-config! [[k & ks] val] (swap! config assoc-in (cons k ks) val))
+(defn set-config! [ks val] (swap! config assoc-in ks val))
 
 (defn test-config "Returns per-test config, merged over defaults."
   [test-name]
