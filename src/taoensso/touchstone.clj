@@ -26,10 +26,9 @@
 ;;;; Config & bindings
 
 (utils/defonce* config
-  "This map atom controls everything about the way Touchstone operates.
-  See source code for details.
-
-  WARNING: per-test config API very likely to change before 1.x release."
+  "Alpha - subject to change.
+  This map atom controls everything about the way Touchstone operates.
+  See source code for details."
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
          :tests {:default {:test-session-ttl 7200 ; Last activity +2hrs
