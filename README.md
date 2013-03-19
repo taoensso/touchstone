@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.13.1"]
+[com.taoensso/touchstone "0.14.0"]
 ```
 
 # Touchstone, a Clojure split-testing library
@@ -26,7 +26,7 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 Depend on Touchstone in your `project.clj`:
 
 ```clojure
-[com.taoensso/touchstone "0.13.1"]
+[com.taoensso/touchstone "0.14.0"]
 ```
 
 and `require` the library:
@@ -49,7 +49,7 @@ Traditional split-testing consists of 4 steps:
 
 The particular multi-armed bandit technique used by Touchstone means that we only concern ourselves with steps 1 and 3. Steps 2 and 4 are handled automatically by the algorithm.
 
-**To optimize a Ring web application**, start by adding `(taoensso.touchstone.ring/make-wrap-random-test-subject-id)` to your middleware stack.
+**To optimize a Ring web application**, start by adding `(taoensso.touchstone.ring/wrap-random-test-subject-id)` to your middleware stack.
 
 One or more named-test selectors can then be used as part of your page content:
 

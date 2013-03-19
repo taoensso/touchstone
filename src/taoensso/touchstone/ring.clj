@@ -14,21 +14,25 @@
 
 (comment (bot-user-agent? {"user-agent" "GoogleBot"}))
 
-(defn make-wrap-random-test-subject-id
-  "Returns Ring middleware that generates, sessionizes, and binds a test-subject
-  id for requests eligible for split-testing (by default this excludes clients
-  that report themselves as bots)."
-  [& {:keys [eligible?-fn]
+(defn wrap-random-test-subject-id
+  "Ring middleware that generates, sessionizes, and binds a test-subject id for
+  requests eligible for split-testing (by default this excludes clients that
+  report themselves as bots)."
+  [handler
+   & {:keys [eligible?-fn]
       :or   {eligible?-fn (fn [request] (not (bot-user-agent? (:headers request))))}}]
-  (fn [handler]
-    (fn [request]
-      (if-not (eligible?-fn request)
-        (handler request)
+  (fn [request]
+    (if-not (eligible?-fn request)
+      (handler request)
 
-        (if (contains? (:session request) :mab-subject-id)
-          (let [sessionized-id (get-in request [:session :mab-subject-id])]
-            (touchstone/with-test-subject sessionized-id (handler request)))
+      (if (contains? (:session request) :mab-subject-id)
+        (let [sessionized-id (get-in request [:session :mab-subject-id])]
+          (touchstone/with-test-subject sessionized-id (handler request)))
 
-          (let [new-id   (str (rand-int 2147483647))
-                response (touchstone/with-test-subject new-id (handler request))]
-            (assoc-in response [:session :mab-subject-id] new-id)))))))
+        (let [new-id   (str (rand-int 2147483647))
+              response (touchstone/with-test-subject new-id (handler request))]
+          (assoc-in response [:session :mab-subject-id] new-id))))))
+
+(defn make-wrap-random-test-subject-id
+  "DEPRECATED. Please use `wrap-random-test-subject-id."
+  [& args] (fn [handler] (apply wrap-random-test-subject-id handler args)))
