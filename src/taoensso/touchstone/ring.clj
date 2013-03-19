@@ -14,15 +14,14 @@
 
 (comment (bot-user-agent? {"user-agent" "GoogleBot"}))
 
-(defn wrap-random-test-subject-id
+(defn wrap-test-subject-id
   "Ring middleware that generates, sessionizes, and binds a test-subject id for
   requests eligible for split-testing (by default this excludes clients that
   report themselves as bots)."
-  [handler
-   & {:keys [eligible?-fn]
-      :or   {eligible?-fn (fn [request] (not (bot-user-agent? (:headers request))))}}]
+  [handler & [wrap-pred]]
   (fn [request]
-    (if-not (eligible?-fn request)
+    (if-not ((or wrap-pred (fn [request] (not (bot-user-agent? (:headers request)))))
+             request)
       (handler request)
 
       (if (contains? (:session request) :mab-subject-id)
@@ -32,7 +31,3 @@
         (let [new-id   (str (rand-int 2147483647))
               response (touchstone/with-test-subject new-id (handler request))]
           (assoc-in response [:session :mab-subject-id] new-id))))))
-
-(defn make-wrap-random-test-subject-id
-  "DEPRECATED. Please use `wrap-random-test-subject-id."
-  [& args] (fn [handler] (apply wrap-random-test-subject-id handler args)))
