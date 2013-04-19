@@ -50,7 +50,7 @@
      (car/with-conn pool# spec# ~@body)))
 
 (def ^:private tkey "Prefixed Touchstone key"
-  (memoize (car/make-keyfn "touchstone")))
+  (memoize (partial car/kname "touchstone")))
 
 (def ^:dynamic *mab-subject-id* nil)
 
