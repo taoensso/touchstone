@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "0.15.0"
+(defproject com.taoensso/touchstone "0.16.0"
   :description "Clojure split-testing library"
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"}
