@@ -8,7 +8,7 @@
                  [org.clojure/math.combinatorics "0.0.3"]]
   :profiles {:1.3   {:dependencies [[org.clojure/clojure "1.3.0"]]}
              :1.4   {:dependencies [[org.clojure/clojure "1.4.0"]]}
-             :1.5   {:dependencies [[org.clojure/clojure "1.5.0-alpha3"]]}
+             :1.5   {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :dev   {:dependencies []}
              :test  {:dependencies []}
              :bench {:dependencies []}}
