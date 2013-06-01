@@ -4,42 +4,37 @@ Current [semantic](http://semver.org/) version:
 [com.taoensso/touchstone "0.16.0"]
 ```
 
-# Touchstone, a Clojure split-testing library
+# Touchstone, a Clojure A/B testing library
 
-[Split-testing](http://en.wikipedia.org/wiki/A/B_testing) is great for **conversion optimization**. We should all be doing more of it. But traditional A/B tests can be a nuisance to setup and monitor.
+[A/B testing](http://en.wikipedia.org/wiki/A/B_testing) is great for **conversion optimization**. We should all be doing more of it. But traditional A/B tests can be a nuisance to setup and monitor.
 
 Touchstone is an attempt to bring **dead-simple, high-power split-testing** to any Clojure web application. It uses [multi-armed bandit](http://en.wikipedia.org/wiki/Multi-armed_bandit) techniques to provide **fast, accurate, low-maintenance** conversion optimization. The API is very simple and *highly flexible*.
 
-## What's In The Box?
+## What's in the box™?
  * Small, uncomplicated **all-Clojure** library.
- * **Great performance** (backed by [Redis](http://redis.io/) and [Carmine](https://github.com/ptaoussanis/carmine)).
+ * **Great performance** (backed by [Carmine](https://github.com/ptaoussanis/carmine)).
  * **High flexibility** (variations are *arbitrary Clojure forms*).
  * **Low maintenace** (fire-and-forget, automatic-selection algorithm).
  * Fire-and-forget **multivariate** testing.
  * **Advanced capabilities** like test composition (dependent tests), arbitrary scoring, engagement testing, etc.
  * **Ring middleware**.
 
-## Getting Started
+## Getting started
 
-### Leiningen
+### Dependencies
 
-Depend on Touchstone in your `project.clj`:
-
-```clojure
-[com.taoensso/touchstone "0.16.0"]
-```
-
-and `require` the library:
+Add the necessary dependency to your [Leiningen](http://leiningen.org/) `project.clj` and `require` the library in your ns:
 
 ```clojure
-(ns my-app (:require [taoensso.touchstone :as touchstone]))
+[com.taoensso/touchstone "0.16.0"] ; project.clj
+(ns my-app (:require [taoensso.touchstone :as touchstone])) ; ns
 ```
 
 ### Configuration
 
 Works out-the-box with default Redis configuration. See `touchstone/config` for custom Redis connection requirements.
 
-### Split-Testing
+### Split-testing
 
 Traditional split-testing consists of 4 steps:
   1. Defining content variations (e.g. possible labels for a sign-up button).
@@ -81,16 +76,23 @@ If you're interested, you can examine the accumulated statistical data at any po
 
 See the `mab-select` and `mab-commit!` docstrings for info on more advanced capabilities like **multivariate testing, test composition (dependent tests), arbitrary scoring, engagement testing**, etc.
 
-## Touchstone Supports the ClojureWerkz and CDS Project Goals
+## Project links
 
-ClojureWerkz is a growing collection of open-source, batteries-included [Clojure libraries](http://clojurewerkz.org/) that emphasise modern targets, great documentation, and thorough testing.
+  * [API documentation](http://ptaoussanis.github.io/touchstone/).
+  * My other [Clojure libraries](https://www.taoensso.com/clojure-libraries) (Redis & DynamoDB clients, logging+profiling, I18n+L10n, serialization, A/B testing).
 
-CDS (Clojure Documentation Site) is a contributor-friendly community project aimed at producing top-notch [Clojure tutorials](http://clojure-doc.org/) and documentation.
+##### This project supports the **CDS and ClojureWerkz project goals**:
 
-## Contact & Contribution
+  * [CDS](http://clojure-doc.org/), the **Clojure Documentation Site**, is a contributer-friendly community project aimed at producing top-notch Clojure tutorials and documentation.
 
-Reach me (Peter Taoussanis) at [taoensso.com](https://www.taoensso.com) for questions/comments/suggestions/whatever. I'm very open to ideas if you have any! I'm also on Twitter: [@ptaoussanis](https://twitter.com/#!/ptaoussanis).
+  * [ClojureWerkz](http://clojurewerkz.org/) is a growing collection of open-source, batteries-included **Clojure libraries** that emphasise modern targets, great documentation, and thorough testing.
+
+## Contact & contribution
+
+Please use the [project's GitHub issues page](https://github.com/ptaoussanis/touchstone/issues) for project questions/comments/suggestions/whatever **(pull requests welcome!)**. Am very open to ideas if you have any!
+
+Otherwise reach me (Peter Taoussanis) at [taoensso.com](https://www.taoensso.com) or on Twitter ([@ptaoussanis](https://twitter.com/#!/ptaoussanis)). Cheers!
 
 ## License
 
-Copyright &copy; 2012 Peter Taoussanis. Distributed under the [Eclipse Public License](http://www.eclipse.org/legal/epl-v10.html), the same as Clojure.
+Copyright &copy; 2012, 2013 Peter Taoussanis. Distributed under the [Eclipse Public License](http://www.eclipse.org/legal/epl-v10.html), the same as Clojure.
