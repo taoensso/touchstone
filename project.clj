@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "0.16.0"
+(defproject com.taoensso/touchstone "1.0.0"
   :description "Clojure A/B testing library"
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"
