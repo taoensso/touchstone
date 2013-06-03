@@ -42,7 +42,7 @@
                   ancestors    (when-let [parts (-> test-name utils/scoped-name
                                                     (str/split #"\.|/")
                                                     butlast)]
-                                 (for [num-parts (range 1 (inc (count parts)))]
+                                 (for [num-parts (map inc (range (count parts)))]
                                    (keyword (str/join "." (take num-parts parts)))))]
               (merge (apply merge (map tests-config (cons :default ancestors)))
                      (tests-config test-name)))]
