@@ -30,13 +30,33 @@
 
 (defn set-config! [ks val] (swap! config assoc-in ks val))
 
-(defn test-config "Returns per-test config, merged over defaults."
-  ;; TODO Add support for config inheritence
+(def ^:private test-config-cache (atom {}))
+(defn- test-config
+  "Returns cached per-test config, merged recursively over config ancestors:
+  :my-app.buttons/sign-up config will be merged from:
+    :default, :my-app, :my-app.buttons, :my-app.buttons/sign-up"
   [test-name]
-  (let [tests-config (:tests @config)]
-    (merge (:default tests-config) (get tests-config test-name))))
+  (or (@test-config-cache test-name)
+      (let [merged-config
+            (let [tests-config (:tests @config)
+                  ancestors    (when-let [parts (-> test-name utils/scoped-name
+                                                    (str/split #"\.|/")
+                                                    butlast)]
+                                 (for [num-parts (range 1 (inc (count parts)))]
+                                   (keyword (str/join "." (take num-parts parts)))))]
+              (merge (apply merge (map tests-config (cons :default ancestors)))
+                     (tests-config test-name)))]
+        (swap! test-config-cache #(assoc % test-name merged-config))
+        merged-config)))
 
-(comment (test-config :my-app.landing.buttons/sign-up))
+(comment (test-config :my-app.landing.buttons/sign-up)
+         @test-config-cache)
+
+(add-watch
+ config "config-cache-watch"
+ (fn [key ref old-state new-state]
+   (when (not= (:tests old-state) (:tests new-state))
+     (reset! test-config-cache {}))))
 
 (defmacro ^:private wcar "With Carmine..."
   [& body]
