@@ -17,17 +17,10 @@
             [taoensso.carmine           :as car])
   (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
 
-;;;; TODO
-;; * Per-test config inheritence (namespaces? :test-profiles?
-;;   with-test-config?). Bindings are ugly since they need to happen (in sync)
-;;   for both selects and commits.
-;; * Test commit & reporting groups?
-
 ;;;; Config & bindings
 
 (utils/defonce* config
-  "Alpha - subject to change.
-  This map atom controls everything about the way Touchstone operates.
+  "This map atom controls everything about the way Touchstone operates.
   See source code for details."
   (atom {:carmine {:pool (car/make-conn-pool)
                    :spec (car/make-conn-spec)}
@@ -37,12 +30,33 @@
 
 (defn set-config! [ks val] (swap! config assoc-in ks val))
 
-(defn test-config "Returns per-test config, merged over defaults."
+(def ^:private test-config-cache (atom {}))
+(defn- test-config
+  "Returns cached per-test config, merged recursively over config ancestors:
+  :my-app.buttons/sign-up config will be merged from:
+    :default, :my-app, :my-app.buttons, :my-app.buttons/sign-up"
   [test-name]
-  (let [tests-config (:tests @config)]
-    (merge (:default tests-config) (get tests-config test-name))))
+  (or (@test-config-cache test-name)
+      (let [merged-config
+            (let [tests-config (:tests @config)
+                  ancestors    (when-let [parts (-> test-name utils/scoped-name
+                                                    (str/split #"\.|/")
+                                                    butlast)]
+                                 (for [num-parts (range 1 (inc (count parts)))]
+                                   (keyword (str/join "." (take num-parts parts)))))]
+              (merge (apply merge (map tests-config (cons :default ancestors)))
+                     (tests-config test-name)))]
+        (swap! test-config-cache #(assoc % test-name merged-config))
+        merged-config)))
 
-(comment (test-config :my-app/landing.buttons.sign-up))
+(comment (test-config :my-app.landing.buttons/sign-up)
+         @test-config-cache)
+
+(add-watch
+ config "config-cache-watch"
+ (fn [key ref old-state new-state]
+   (when (not= (:tests old-state) (:tests new-state))
+     (reset! test-config-cache {}))))
 
 (defmacro ^:private wcar "With Carmine..."
   [& body]
@@ -116,7 +130,7 @@
   (keyword (wcar (car/get (tkey test-name (or mab-subject-id *mab-subject-id*)
                                 "selection")))))
 
-(comment (selected-form-name :my-app/landing.buttons.sign-up "user1403"))
+(comment (selected-form-name :my-app.landing.buttons/sign-up "user1403"))
 
 ;;;; Selection strategies
 
@@ -185,8 +199,8 @@
   a specified value (-1 <= value <= 1) to a named MAB test score:
 
       ;; On sign-up button click:
-      (mab-commit! :my-app/landing.buttons.sign-up 1
-                   :my-app/landing.title           0.5)
+      (mab-commit! :my-app.landing.buttons/sign-up 1
+                   :my-app.landing/title           0.5)
 
       ;; On buy button click:
       (mab-commit! :my-app/sale-price (if (>= order-item-qty 2) 1 0.8))
@@ -216,8 +230,8 @@
      (dorun (map (fn [[n v]] (mab-commit! n v))
                  (partition 2 (into [test-name value] name-value-pairs))))))
 
-(comment (mab-commit! :my-app/landing.buttons.sign-up 1
-                      :my-app/landing.title 1))
+(comment (mab-commit! :my-app.landing.buttons/sign-up 1
+                      :my-app.landing/title 1))
 
 ;;;; Reporting
 
@@ -244,22 +258,22 @@
 
 (comment
 
-  (wcar (car/hgetall* (tkey :my-app/landing.buttons.sign-up "nprospects"))
-        (car/hgetall* (tkey :my-app/landing.buttons.sign-up "scores")))
+  (wcar (car/hgetall* (tkey :my-app.landing.buttons/sign-up "nprospects"))
+        (car/hgetall* (tkey :my-app.landing.buttons/sign-up "scores")))
 
-  (pr-mab-results :my-app/landing.buttons.sign-up
-                  :my-app/landing.title)
+  (pr-mab-results :my-app.landing.buttons/sign-up
+                  :my-app.landing/title)
 
   (with-test-subject "user1403"
     (mab-select
-     :my-app/landing.buttons.sign-up
+     :my-app.landing.buttons/sign-up
      :red    (do (println "RED")    "Red button")
      :blue   (do (println "BLUE")   "Blue button")
      :green  (do (println "GREEN")  "Green button")
      :yellow (do (println "YELLOW") "Yellow button")))
 
   (with-test-subject "user1403"
-    (mab-commit! :my-app/landing.buttons.sign-up 1)))
+    (mab-commit! :my-app.landing.buttons/sign-up 1)))
 
 ;;;; Selection wrappers
 
@@ -280,7 +294,7 @@
   [test-name & name-form-pairs]
   `(select-form! #'ucb1-select ~test-name ~name-form-pairs))
 
-(comment (mab-select :my-app/landing.buttons.sign-up
+(comment (mab-select :my-app.landing.buttons/sign-up
                      :sign-up  "Sign-up!"
                      :join     "Join!"
                      :join-now "Join now!"))
@@ -349,7 +363,7 @@
                                        (tkey new-name)) old-tkeys)]
       (wcar (doall (map car/renamenx old-tkeys new-tkeys))))))
 
-(comment (test-tkeys  :my-app/landing.buttons.sign-up)
-         (delete-test :my-app/landing.buttons.sign-up)
-         (rename-test :my-app/landing.buttons.sign-up :my-app/foobar)
-         (rename-test :my-app/foobar :my-app/landing.buttons.sign-up))
+(comment (test-tkeys  :my-app.landing.buttons/sign-up)
+         (delete-test :my-app.landing.buttons/sign-up)
+         (rename-test :my-app.landing.buttons/sign-up :my-app/foobar)
+         (rename-test :my-app.foobar :my-app.landing.buttons/sign-up))

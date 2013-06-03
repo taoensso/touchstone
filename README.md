@@ -1,7 +1,7 @@
 Current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "0.16.0"]
+[com.taoensso/touchstone "1.0.0"] ; Requires Clojure 1.4+ as of 1.0.0
 ```
 
 # Touchstone, a Clojure A/B testing library
@@ -26,7 +26,7 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 Add the necessary dependency to your [Leiningen](http://leiningen.org/) `project.clj` and `require` the library in your ns:
 
 ```clojure
-[com.taoensso/touchstone "0.16.0"] ; project.clj
+[com.taoensso/touchstone "1.0.0"] ; project.clj
 (ns my-app (:require [taoensso.touchstone :as touchstone])) ; ns
 ```
 
@@ -79,7 +79,7 @@ See the `mab-select` and `mab-commit!` docstrings for info on more advanced capa
 ## Project links
 
   * [API documentation](http://ptaoussanis.github.io/touchstone/).
-  * My other [Clojure libraries](https://www.taoensso.com/clojure-libraries) (Redis & DynamoDB clients, logging+profiling, I18n+L10n, serialization, A/B testing).
+  * My other [Clojure libraries](https://www.taoensso.com/clojure-libraries) (Redis & DynamoDB clients, logging+profiling, i18n+L10n, serialization, A/B testing).
 
 ##### This project supports the **CDS and ClojureWerkz project goals**:
 
