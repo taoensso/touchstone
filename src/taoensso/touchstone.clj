@@ -15,7 +15,7 @@
   (:require [clojure.string             :as str]
             [clojure.math.combinatorics :as combo]
             [taoensso.carmine           :as car])
-  (:use     [taoensso.touchstone.utils :as utils :only (scoped-name)]))
+  (:use     [taoensso.touchstone.utils :as utils :only (fq-name)]))
 
 ;;;; Config & bindings
 
@@ -39,7 +39,7 @@
   (or (@test-config-cache test-name)
       (let [merged-config
             (let [tests-config (:tests @config)
-                  ancestors    (when-let [parts (-> test-name utils/scoped-name
+                  ancestors    (when-let [parts (-> test-name utils/fq-name
                                                     (str/split #"\.|/")
                                                     butlast)]
                                  (for [num-parts (map inc (range (count parts)))]
@@ -95,7 +95,7 @@
                     ttl  (:test-session-ttl (test-config test-name))]
                 (wcar
                  ;; Refresh test-session ttl
-                 (car/setex selection-tkey ttl (scoped-name form-name))
+                 (car/setex selection-tkey ttl (fq-name form-name))
                  (car/expire (tkey test-name *mab-subject-id* "committed?") ttl)
 
                  ;; Count selection as prospect
@@ -103,7 +103,7 @@
                            (not prior-selected-form-name) ; New selection
                            )
                    (car/hincrby (tkey test-name "nprospects")
-                                (scoped-name form-name) 1)))
+                                (fq-name form-name) 1)))
                 form))]
 
         ;; Selections are sticky: honour a recent, valid pre-existing selection
@@ -143,7 +143,7 @@
   (utils/memoize-ttl 5000
     (fn [test-name form-names]
       (let [nprospects-map (wcar (car/hgetall* (tkey test-name "nprospects")))]
-        (first (sort-by #(car/as-long (get nprospects-map (scoped-name %) 0))
+        (first (sort-by #(car/as-long (get nprospects-map (fq-name %) 0))
                         form-names))))))
 
 (defn- ucb1-score* [N n score]
@@ -167,10 +167,10 @@
   [test-name form-name]
   (let [[nprospects-map score]
         (wcar (car/hgetall* (tkey test-name "nprospects"))
-              (car/hget     (tkey test-name "scores") (scoped-name form-name)))
+              (car/hget     (tkey test-name "scores") (fq-name form-name)))
 
         score       (or (car/as-double score) 0)
-        nprospects  (car/as-long (get nprospects-map (scoped-name form-name) 0))
+        nprospects  (car/as-long (get nprospects-map (fq-name form-name) 0))
         nprosps-sum (reduce + (map car/as-long (vals nprospects-map)))]
     (ucb1-score* nprosps-sum nprospects score)))
 
@@ -220,7 +220,7 @@
              (wcar
               ;; Count commit value toward score
               (car/hincrbyfloat (tkey test-name "scores")
-                                (scoped-name selected-form-name)
+                                (fq-name selected-form-name)
                                 (str value))
 
               ;; Mark test as committed for this subject's test-session
