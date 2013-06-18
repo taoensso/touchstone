@@ -19,6 +19,8 @@
 
 ;;;; Config & bindings
 
+;; TODO Consider dropping :pool/:spec atom config with new Carmine v2 API
+
 (utils/defonce* config
   "This map atom controls everything about the way Touchstone operates.
   See source code for details."
