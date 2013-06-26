@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure            "1.4.0"]
                  [org.clojure/tools.macro        "0.1.2"]
                  [org.clojure/math.combinatorics "0.0.3"]
-                 [expectations                   "1.4.43"]
+                 [expectations                   "1.4.48"]
                  [com.taoensso/carmine           "1.12.0"]]
   :profiles {:1.4   {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5   {:dependencies [[org.clojure/clojure "1.5.1"]]}
