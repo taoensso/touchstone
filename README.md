@@ -1,4 +1,4 @@
-**[API docs](http://ptaoussanis.github.io/touchstone/)** | [contact & contributing](#contact--contributing) | [other Clojure libs](https://www.taoensso.com/clojure-libraries) | [Twitter](https://twitter.com/#!/ptaoussanis) | current [semantic](http://semver.org/) version:
+**[API docs](http://ptaoussanis.github.io/touchstone/)** | **[CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md)** | [contact & contributing](#contact--contributing) | [other Clojure libs](https://www.taoensso.com/clojure-libraries) | [Twitter](https://twitter.com/#!/ptaoussanis) | current [semantic](http://semver.org/) version:
 
 ```clojure
 [com.taoensso/touchstone "1.0.0"] ; Requires Clojure 1.4+ as of 1.0.0
