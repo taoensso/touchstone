@@ -19,7 +19,9 @@
 
 ;;;; Config & bindings
 
-;; TODO Consider dropping :pool/:spec atom config with new Carmine v2 API
+;; TODO (v2 breaking): drop config atom (& inheritence) in favour of a
+;; TestConfig record passed explicitly to each API call. Use Carmine v2-style
+;; conn here while we're at it.
 
 (utils/defonce* config
   "This map atom controls everything about the way Touchstone operates.
