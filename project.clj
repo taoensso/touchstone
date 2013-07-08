@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "1.0.0"
+(defproject com.taoensso/touchstone "2.0.0-RC1"
   :description "Clojure A/B testing library"
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"
@@ -7,7 +7,7 @@
                  [org.clojure/tools.macro        "0.1.2"]
                  [org.clojure/math.combinatorics "0.0.3"]
                  [expectations                   "1.4.48"]
-                 [com.taoensso/carmine           "1.12.0"]]
+                 [com.taoensso/carmine           "2.0.0-beta5"]]
   :profiles {:1.4   {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5   {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :1.6   {:dependencies [[org.clojure/clojure "1.6.0-master-SNAPSHOT"]]}

@@ -39,16 +39,13 @@
             (swap! cache assoc args {:time-cached now :d-result d-result})
             @d-result))))))
 
-(defn fq-name
-  "Like `name` but includes namespace in string when present."
-  [x]
-  (if (string? x) x
-      (let [n (name x)]
-        (if-let [ns (namespace x)] (str ns "/" n) n))))
+(defn round-to
+  "Rounds argument to given number of decimal places."
+  [places x]
+  (if (zero? places)
+    (Math/round (double x))
+    (let [modifier (Math/pow 10.0 places)]
+      (/ (Math/round (* x modifier)) modifier))))
 
-(comment (map fq-name [:foo :foo/bar :foo.bar/baz])
-         (time (dotimes [_ 10000] (name :foo)))
-         (time (dotimes [_ 10000] (fq-name :foo))))
-
-(defn approx= [x y & [signf]]
-  (< (Math/abs (double (- x y))) (or signf 0.001)))
+(comment (round-to 0 10)
+         (round-to 2 10.123))

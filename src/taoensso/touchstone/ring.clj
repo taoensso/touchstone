@@ -4,13 +4,13 @@
   (:require [clojure.string      :as str]
             [taoensso.touchstone :as touchstone]))
 
-(defn bot-user-agent?
-  "Simple test for honest bots."
+(defn bot-user-agent? "Simple test for honest bots."
   [ring-request-headers]
-  (boolean
-   (re-find
-    #"(agent|bing|bot|crawl|curl|facebook|google|index|slurp|spider|teoma|wget)"
-    (str/lower-case (get ring-request-headers "user-agent" "")))))
+  (->> (get ring-request-headers "user-agent" "")
+       (str/lower-case)
+       (re-find
+        #"(agent|bing|bot|crawl|curl|facebook|google|index|slurp|spider|teoma|wget)")
+       (boolean)))
 
 (comment (bot-user-agent? {"user-agent" "GoogleBot"}))
 
@@ -20,14 +20,15 @@
   report themselves as bots)."
   [handler & [wrap-pred]]
   (fn [request]
-    (if-not ((or wrap-pred (fn [request] (not (bot-user-agent? (:headers request)))))
-             request)
+    (if-not ((or wrap-pred #(not (bot-user-agent? (:headers %)))) request)
       (handler request)
 
-      (if (contains? (:session request) :mab-subject-id)
-        (let [sessionized-id (get-in request [:session :mab-subject-id])]
-          (touchstone/with-test-subject sessionized-id (handler request)))
+      (if (contains? (:session request) :ts-id) ; May be nil!
+        (let [sessionized-id (get-in request [:session :ts-id])]
+          (touchstone/with-test-subject sessionized-id
+            (handler (assoc request :ts-id sessionized-id))))
 
-        (let [new-id   (str (rand-int 2147483647))
-              response (touchstone/with-test-subject new-id (handler request))]
-          (assoc-in response [:session :mab-subject-id] new-id))))))
+        (let [new-id   (rand-int 2147483647)
+              response (touchstone/with-test-subject new-id
+                         (handler (assoc request :ts-id new-id)))]
+          (assoc-in response [:session :ts-id] new-id))))))
