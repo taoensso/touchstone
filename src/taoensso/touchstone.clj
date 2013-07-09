@@ -83,7 +83,7 @@
   "Returns id of a form with lowest number of prospects (possibly zero)."
   (utils/memoize-ttl 5000
     (fn [{:keys [conn]} test-id form-ids]
-      (let [nprospects-map (wcar conn (car/hgetall* (tkey test-id :nprospects) true))]
+      (let [nprospects-map (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords))]
         (first (sort-by #(car/as-long (get nprospects-map % 0)) form-ids))))))
 
 (defn- ucb1-score* [N n score]
@@ -106,7 +106,7 @@
   difference between observed form scores."
   [{:keys [conn]} test-id form-id]
   (let [[nprospects-map score]
-        (wcar conn (car/hgetall* (tkey test-id :nprospects) true)
+        (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords)
                    (car/hget     (tkey test-id :scores) form-id))
 
         score       (or (car/as-double score) 0)
@@ -174,8 +174,8 @@
 (defn pr-results
   ([{:keys [conn] :as config} test-id]
      (let [[nprospects-map scores-map]
-           (wcar conn (car/hgetall* (tkey test-id :nprospects) true)
-                      (car/hgetall* (tkey test-id :scores)     true))
+           (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords)
+                      (car/hgetall* (tkey test-id :scores)     :keywords))
            nprosps-sum (reduce + (map car/as-long   (vals nprospects-map)))
            scores-sum  (reduce + (map car/as-double (vals scores-map)))
            round       #(utils/round-to 2 %)
@@ -256,8 +256,8 @@
 ;;;; Tests, etc.
 
 (comment
-  (wcar {} (car/hgetall* (tkey :touchstone1 :nprospects) true)
-           (car/hgetall* (tkey :touchstone2 :scores)     true))
+  (wcar {} (car/hgetall* (tkey :touchstone1 :nprospects) :keywords)
+           (car/hgetall* (tkey :touchstone2 :scores)     :keywords))
 
   (pr-results {} :touchstone1 :touchstone2)
 
