@@ -57,7 +57,7 @@
           (select-and-return-form! prior-selected-form-id)
           (select-and-return-form! @leading-form))))))
 
-(defmacro ^:private select-form!
+(defmacro select-form! "Implementation detail."
   [config strategy-fn ts-id test-id id-form-pairs]
   (assert (even? (count id-form-pairs)))
   (let [id-form-fn-pairs (into {} (for [[id f] (partition 2 id-form-pairs)]
@@ -211,13 +211,13 @@
   Test forms can be freely added, reordered, or removed for an ongoing test at
   any time, but avoid changing a particular form once id'd."
   [config ts-id test-id & id-form-pairs]
-  `(#'select-form! ~config #'ucb1-select ~ts-id ~test-id ~id-form-pairs))
+  `(select-form! ~config ~#'ucb1-select ~ts-id ~test-id ~id-form-pairs))
 
 (defmacro ab-select
   "Like `mab-select` but uses simple, A/B-style random selection. Unless you
   know all the implications, you probably want `mab-select` instead."
   [config ts-id test-id & id-form-pairs]
-  `(#'select-form! ~config #'random-select ~ts-id ~test-id ~id-form-pairs))
+  `(select-form! ~config ~#'random-select ~ts-id ~test-id ~id-form-pairs))
 
 (defmacro mab-select-id
   "Like `mab-select` but takes only form ids and uses each id also as its form."

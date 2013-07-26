@@ -1,4 +1,4 @@
-## v1.0.0 → v2.0.0-RC1
+## v1.0.0 → v2.0.0-RC2
   * **BREAKING**: All relevant fns now take an explicit config arg and test-subject id (you can use the `*ts-id*` thread-local binding for this).
   * **BREAKING**: Renamed `mab-commit!` -> `commit!`, `pr-mab-results` -> `pr-results`.
 

@@ -1,7 +1,7 @@
 **[API docs](http://ptaoussanis.github.io/touchstone/)** | **[CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md)** | [contact & contributing](#contact--contributing) | [other Clojure libs](https://www.taoensso.com/clojure-libraries) | [Twitter](https://twitter.com/#!/ptaoussanis) | current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "2.0.0-RC1"] ; Development (notes below)
+[com.taoensso/touchstone "2.0.0-RC2"] ; Development (notes below)
 [com.taoensso/touchstone "1.0.0"]     ; Stable, needs Clojure 1.4+ as of 1.0.0
 ```
 
@@ -29,7 +29,7 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 Add the necessary dependency to your [Leiningen](http://leiningen.org/) `project.clj` and `require` the library in your ns:
 
 ```clojure
-[com.taoensso/touchstone "2.0.0-RC1"] ; project.clj
+[com.taoensso/touchstone "2.0.0-RC2"] ; project.clj
 (ns my-app (:require [taoensso.touchstone :as touchstone :refer (*ts-id*)])) ; ns
 ```
 
