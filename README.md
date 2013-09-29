@@ -5,7 +5,7 @@
 [com.taoensso/touchstone "1.0.0"]     ; Stable, needs Clojure 1.4+ as of 1.0.0
 ```
 
-v2 is a **BREAKING** release. It adss explicit test config and test-subject id args to every relevant API fn. See the [CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md) for migration details.
+v2 is a **BREAKING** release. It adds explicit test config and test-subject id args to every relevant API fn. See the [CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md) for migration details.
 
 # Touchstone, a Clojure A/B testing library
 
