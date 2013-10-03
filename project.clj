@@ -6,12 +6,12 @@
   :dependencies [[org.clojure/clojure            "1.4.0"]
                  [org.clojure/tools.macro        "0.1.5"]
                  [org.clojure/math.combinatorics "0.0.4"]
-                 [com.taoensso/carmine           "2.2.0"]]
+                 [com.taoensso/carmine           "2.2.3"]]
   :profiles {:1.4   {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5   {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :1.6   {:dependencies [[org.clojure/clojure "1.6.0-master-SNAPSHOT"]]}
              :dev   {:dependencies []}
-             :test  {:dependencies [[expectations   "1.4.55"]
+             :test  {:dependencies [[expectations   "1.4.56"]
                                     [ring/ring-core "1.2.0"]]}
              :bench {:dependencies []}}
   :aliases {"test-all"    ["with-profile" "test,1.4:test,1.5:test,1.6" "expectations"]
