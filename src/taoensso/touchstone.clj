@@ -24,7 +24,7 @@
   "Executes body within the context of thread-local test-subject-id binding."
   [id & body] `(binding [*ts-id* ~id] ~@body))
 
-(def ^:private tkey (memoize (partial car/kname :touchstone)))
+(def ^:private tkey (memoize (partial car/key :touchstone)))
 
 ;;;; Low-level form selection
 
