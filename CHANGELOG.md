@@ -1,4 +1,12 @@
-## v1.0.0 → v2.0.0-RC2
+## v2.0.0 → v2.0.1
+
+  Minor, non-breaking release: **2013 Nov 25**.
+
+  * [FIX]: previous Ring middleware could wipe session under certain circumstances. This has been fixed.
+  * [HK]: bump some dependencies, clean up `project.clj`.
+
+
+## v1.0.0 → v2.0.0
   * **BREAKING**: All relevant fns now take an explicit config arg and test-subject id (you can use the `*ts-id*` thread-local binding for this).
   * **BREAKING**: Renamed `mab-commit!` -> `commit!`, `pr-mab-results` -> `pr-results`.
 

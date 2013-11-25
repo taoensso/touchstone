@@ -1,10 +1,8 @@
 **[API docs](http://ptaoussanis.github.io/touchstone/)** | **[CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md)** | [contact & contributing](#contact--contributing) | [other Clojure libs](https://www.taoensso.com/clojure-libraries) | [Twitter](https://twitter.com/#!/ptaoussanis) | current [semantic](http://semver.org/) version:
 
 ```clojure
-[com.taoensso/touchstone "2.0.0"] ; Stable; see CHANGELOG for changes since 1.x
+[com.taoensso/touchstone "2.0.1"] ; Stable; see CHANGELOG for details
 ```
-
-v2 is a **BREAKING** release. It adds explicit test config and test-subject id args to every relevant API fn. See the [CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md) for migration details.
 
 # Touchstone, a Clojure A/B testing library
 
@@ -28,7 +26,7 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 Add the necessary dependency to your [Leiningen](http://leiningen.org/) `project.clj` and `require` the library in your ns:
 
 ```clojure
-[com.taoensso/touchstone "2.0.0"] ; project.clj
+[com.taoensso/touchstone "2.0.1"] ; project.clj
 (ns my-app (:require [taoensso.touchstone :as touchstone :refer (*ts-id*)])) ; ns
 ```
 
