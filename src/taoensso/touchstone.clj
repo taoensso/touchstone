@@ -17,6 +17,8 @@
             [taoensso.carmine           :as car :refer (wcar)]
             [taoensso.touchstone.utils  :as utils]))
 
+;; TODO `conn`->`conn-opts` for consistency with Carmine v3
+
 ;;;; Bindings, etc.
 
 (def ^:dynamic *ts-id* "Test subject id" nil)
