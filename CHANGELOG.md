@@ -1,3 +1,10 @@
+## Pending / unreleased
+
+### Changes
+
+ * Moved most utils to external `encore` dependency.
+
+
 ## v2.0.1 / 2013 Nov 25
 
 ### Fixes

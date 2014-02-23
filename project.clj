@@ -11,7 +11,6 @@
                 *assert* true}
   :dependencies
   [[org.clojure/clojure            "1.4.0"]
-   [org.clojure/tools.macro        "0.1.5"]
    [org.clojure/math.combinatorics "0.0.7"]
    [com.taoensso/encore            "0.8.0"]
    [com.taoensso/carmine           "2.4.6"]]

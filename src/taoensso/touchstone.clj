@@ -14,6 +14,7 @@
   {:author "Peter Taoussanis"}
   (:require [clojure.string             :as str]
             [clojure.math.combinatorics :as combo]
+            [taoensso.encore            :as encore]
             [taoensso.carmine           :as car :refer (wcar)]
             [taoensso.touchstone.utils  :as utils]))
 
@@ -83,7 +84,7 @@
 
 (def ^:private low-n-select
   "Returns id of a form with lowest number of prospects (possibly zero)."
-  (utils/memoize-ttl 5000
+  (encore/memoize* 5000
     (fn [{:keys [conn]} test-id form-ids]
       (let [nprospects-map (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords))]
         (first (sort-by #(car/as-long (get nprospects-map % 0)) form-ids))))))
@@ -130,7 +131,7 @@
 
 (def ^:private ucb1-select
   "Returns id of a given form with highest current \"UCB1\" score."
-  (utils/memoize-ttl 5000 ; 5s cache for performance
+  (encore/memoize* 5000 ; 5s cache for performance
    (fn [config test-id form-ids]
      (last (sort-by #(ucb1-score config test-id %) form-ids)))))
 
@@ -180,7 +181,7 @@
                       (car/hgetall* (tkey test-id :scores)     :keywords))
            nprosps-sum (reduce + (map car/as-long   (vals nprospects-map)))
            scores-sum  (reduce + (map car/as-double (vals scores-map)))
-           round       #(utils/round-to 2 %)
+           round       encore/round2
            output
            (str "\nTouchstone " test-id " results\n"
                 "-----------------------\n"
@@ -245,7 +246,7 @@
   (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
     (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
   (let [take-n (if-not take-n identity
-                       (partial utils/distinct-by (partial take take-n)))
+                       (partial encore/distinct-by (partial take take-n)))
 
         permutations (map vec (take-n (combo/permutations ordered-forms)))
         ids          (map #(keyword (str "form-" (str/join "-" %)))
