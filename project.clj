@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "2.0.1"
+(defproject com.taoensso/touchstone "2.0.2"
   :author "Peter Taoussanis <https://www.taoensso.com>"
   :description "Clojure A/B testing library"
   :url "https://github.com/ptaoussanis/touchstone"
