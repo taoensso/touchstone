@@ -2,6 +2,7 @@
   "Touchstone middleware for Ring."
   {:author "Peter Taoussanis"}
   (:require [clojure.string      :as str]
+            [taoensso.encore     :as encore]
             [taoensso.touchstone :as touchstone]))
 
 (defn bot-user-agent? "Simple test for honest bots."
@@ -13,19 +14,6 @@
        (boolean)))
 
 (comment (bot-user-agent? {"user-agent" "GoogleBot"}))
-
-(defn session-swap
-  "Small util to help correctly manage (modify) funtional sessions."
-  [req resp f & args]
-  (when resp
-    (if (contains? resp :session) ; Use response session (may be nil)
-      (assoc resp :session (apply f (:session resp) args))
-      (assoc resp :session (apply f (:session req)  args)))))
-
-(comment
-  (session-swap {:session {:req? true}} {:session nil}           assoc :new-k :new-v)
-  (session-swap {:session {:req? true}} {:session {:resp? true}} assoc :new-k :new-v)
-  (session-swap {:session {:old? true}} {}                       assoc :new-k :new-v))
 
 (defn wrap-test-subject-id
   "Ring middleware that generates, sessionizes, and binds a test-subject id for
@@ -44,4 +32,4 @@
         (let [new-id   (rand-int 2147483647)
               response (touchstone/with-test-subject new-id
                          (handler (assoc request :ts-id new-id)))]
-          (session-swap request response assoc :ts-id new-id))))))
+          (encore/session-swap request response assoc :ts-id new-id))))))

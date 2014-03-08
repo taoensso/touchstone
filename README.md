@@ -1,7 +1,7 @@
-**[API docs](http://ptaoussanis.github.io/touchstone/)** | **[CHANGELOG](https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md)** | [contact & contributing](#contact--contributing) | [other Clojure libs](https://www.taoensso.com/clojure-libraries) | [Twitter](https://twitter.com/#!/ptaoussanis) | current [semantic](http://semver.org/) version:
+**[API docs][]** | **[CHANGELOG][]** | [other Clojure libs][] | [Twitter][] | [contact/contributing](#contact--contributing) | current ([semantic][]) version:
 
 ```clojure
-[com.taoensso/touchstone "2.0.1"] ; Stable; see CHANGELOG for details
+[com.taoensso/touchstone "2.0.2"] ; Stable
 ```
 
 # Touchstone, a Clojure A/B testing library
@@ -23,10 +23,10 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 
 ### Dependencies
 
-Add the necessary dependency to your [Leiningen](http://leiningen.org/) `project.clj` and `require` the library in your ns:
+Add the necessary dependency to your [Leiningen][] `project.clj` and `require` the library in your ns:
 
 ```clojure
-[com.taoensso/touchstone "2.0.1"] ; project.clj
+[com.taoensso/touchstone "2.0.2"] ; project.clj
 (ns my-app (:require [taoensso.touchstone :as touchstone :refer (*ts-id*)])) ; ns
 ```
 
@@ -66,16 +66,33 @@ See the `mab-select` and `mab-commit!` docstrings for info on more advanced capa
 
 ## This project supports the CDS and ![ClojureWerkz](https://raw.github.com/clojurewerkz/clojurewerkz.org/master/assets/images/logos/clojurewerkz_long_h_50.png) goals
 
-  * [CDS](http://clojure-doc.org/), the **Clojure Documentation Site**, is a **contributer-friendly** community project aimed at producing top-notch, **beginner-friendly** Clojure tutorials and documentation. Awesome resource.
+  * [CDS][], the **Clojure Documentation Site**, is a **contributer-friendly** community project aimed at producing top-notch, **beginner-friendly** Clojure tutorials and documentation. Awesome resource.
 
-  * [ClojureWerkz](http://clojurewerkz.org/) is a growing collection of open-source, **batteries-included Clojure libraries** that emphasise modern targets, great documentation, and thorough testing. They've got a ton of great stuff, check 'em out!
+  * [ClojureWerkz][] is a growing collection of open-source, **batteries-included Clojure libraries** that emphasise modern targets, great documentation, and thorough testing. They've got a ton of great stuff, check 'em out!
 
-## Contact & contribution
+## Contact & contributing
 
-Please use the [project's GitHub issues page](https://github.com/ptaoussanis/touchstone/issues) for project questions/comments/suggestions/whatever **(pull requests welcome!)**. Am very open to ideas if you have any!
+`lein start-dev` to get a (headless) development repl that you can connect to with [Cider][] (emacs) or your IDE.
 
-Otherwise reach me (Peter Taoussanis) at [taoensso.com](https://www.taoensso.com) or on Twitter ([@ptaoussanis](https://twitter.com/#!/ptaoussanis)). Cheers!
+Please use the project's GitHub [issues page][] for project questions/comments/suggestions/whatever **(pull requests welcome!)**. Am very open to ideas if you have any!
+
+Otherwise reach me (Peter Taoussanis) at [taoensso.com][] or on [Twitter][]. Cheers!
 
 ## License
 
-Copyright &copy; 2012, 2013 Peter Taoussanis. Distributed under the [Eclipse Public License](http://www.eclipse.org/legal/epl-v10.html), the same as Clojure.
+Copyright &copy; 2012-2014 Peter Taoussanis. Distributed under the [Eclipse Public License][], the same as Clojure.
+
+
+[API docs]: <http://ptaoussanis.github.io/touchstone/>
+[CHANGELOG]: <https://github.com/ptaoussanis/touchstone/blob/master/CHANGELOG.md>
+[other Clojure libs]: <https://www.taoensso.com/clojure-libraries>
+[Twitter]: <https://twitter.com/ptaoussanis>
+[semantic]: <http://semver.org/>
+[Leiningen]: <http://leiningen.org/>
+[CDS]: <http://clojure-doc.org/>
+[ClojureWerkz]: <http://clojurewerkz.org/>
+[issues page]: <https://github.com/ptaoussanis/touchstone/issues>
+[commit history]: <https://github.com/ptaoussanis/touchstone/commits/master>
+[Cider]: <https://github.com/clojure-emacs/cider>
+[taoensso.com]: <https://www.taoensso.com>
+[Eclipse Public License]: <https://raw2.github.com/ptaoussanis/touchstone/master/LICENSE>
