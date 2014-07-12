@@ -1,17 +1,22 @@
 > This project uses [Break Versioning](https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSIONING.md) as of **Aug 16, 2014**.
 
+## v3.0.0-SNAPSHOT / 2014 Dec 14
+
+> Major update to bring ClojureScript support, general refactoring.
+
+ * **BREAKING**: Drop Clojure 1.4 support.
+
+
 ## v2.0.2 / 2014 Mar 8
 
 > This is a minor, housekeeping update. Bumps some dependencies, etc.
 
- * CHANGE: Moved most utils to external `encore` dependency.
+ * **CHANGE**: Moved most utils to external `encore` dependency.
 
 
 ## v2.0.1 / 2013 Nov 25
 
-### Fixes
-
-  * Previous Ring middleware could wipe session under certain circumstances. This has been fixed.
+  * **FIX**: Previous Ring middleware could wipe session under certain circumstances.
 
 
 ## v1.0.0 → v2.0.0

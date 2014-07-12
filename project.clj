@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "2.0.2"
+(defproject com.taoensso/touchstone "3.0.0-SNAPSHOT"
   :author "Peter Taoussanis <https://www.taoensso.com>"
   :description "Split testing library for Clojure"
   :url "https://github.com/ptaoussanis/touchstone"
@@ -8,48 +8,69 @@
             :comments "Same as Clojure"}
   :min-lein-version "2.3.3"
   :global-vars {*warn-on-reflection* true
-                *assert* true}
-  :dependencies
-  [[org.clojure/clojure            "1.4.0"]
-   [com.taoensso/encore            "0.9.7"]
-   [com.taoensso/carmine           "2.4.6"]
-   [org.clojure/math.combinatorics "0.0.7"]]
+                *assert*             true
+                ;; *unchecked-math*  :warn-on-boxed
+                }
 
-  :test-paths ["test" "src"]
+  :dependencies
+  [[org.clojure/clojure            "1.5.1"]
+   [com.taoensso/encore            "1.22.0"]
+   [com.taoensso/carmine           "2.9.0"]
+   [org.clojure/math.combinatorics "0.1.0"]]
+
   :profiles
   {;; :default [:base :system :user :provided :dev]
-   :1.5  {:dependencies [[org.clojure/clojure "1.5.1"]]}
-   :1.6  {:dependencies [[org.clojure/clojure "1.6.0-beta1"]]}
-   :test {:dependencies [[expectations            "1.4.56"]
-                         [org.clojure/test.check  "0.5.7"]
-                         [ring/ring-core          "1.2.1"]]
-          :plugins [[lein-expectations "0.0.8"]
-                    [lein-autoexpect   "1.2.2"]]}
-   :dev* [:dev {:jvm-opts ^:replace ["-server"]
-                ;; :hooks [cljx.hooks leiningen.cljsbuild] ; cljx
-                }]
+   :server-jvm {:jvm-opts ^:replace ["-server"]}
+   :1.6  {:dependencies [[org.clojure/clojure "1.6.0"]]}
+   :1.7  {:dependencies [[org.clojure/clojure "1.7.0-alpha4"]]}
+   :test {:dependencies [[expectations            "2.1.0"]
+                         [org.clojure/test.check  "0.7.0"]
+                         [ring/ring-core          "1.3.2"]]}
    :dev
-   [:1.6 :test
-    {:dependencies []
-     :plugins [[lein-ancient "0.5.4"]
-               [codox        "0.6.7"]]}]}
+   [:1.7 :test
+    {:dependencies
+     [[org.clojure/clojurescript "0.0-2261"]]
+     :plugins
+     [;; These must be in :dev, Ref. https://github.com/lynaghk/cljx/issues/47:
+      [com.keminglabs/cljx             "0.5.0"]
+      [lein-cljsbuild                  "1.0.3"]
+      [lein-pprint                     "1.1.1"]
+      [lein-ancient                    "0.5.5"]
+      [com.cemerick/austin             "0.1.4"]
+      [lein-expectations               "0.0.8"]
+      [lein-autoexpect                 "1.2.2"]
+      [com.cemerick/clojurescript.test "0.3.1"]
+      [codox                           "0.8.10"]]}]}
 
-  ;; :codox {:sources ["target/classes"]} ; cljx
+  :cljx
+  {:builds
+   [{:source-paths ["src" "test"] :rules :clj  :output-path "target/classes"}
+    {:source-paths ["src" "test"] :rules :cljs :output-path "target/classes"}]}
+
+  :cljsbuild
+  {:test-commands {"node"    ["node" :node-runner "target/main.js"]
+                   "phantom" ["phantomjs" :runner "target/main.js"]}
+   :builds
+   [{:id :main
+     :source-paths ["src" "test" "target/classes"]
+     :compiler     {:output-to "target/main.js"
+                    :optimizations :advanced
+                    :pretty-print false}}]}
+
+  :test-paths ["test" "src"]
+  :prep-tasks [["cljx" "once"] "javac" "compile"]
+  :codox {:language :clojure ; [:clojure :clojurescript] ; No support?
+          :sources  ["target/classes"]
+          :src-linenum-anchor-prefix "L"
+          :src-dir-uri "http://github.com/ptaoussanis/encore/blob/master/src/"
+          :src-uri-mapping {#"target/classes"
+                            #(.replaceFirst (str %) "(.cljs$|.clj$)" ".cljx")}}
+
   :aliases
-  {"test-all"   ["with-profile" "default:+1.5:+1.6" "expectations"]
-   ;; "test-all"   ["with-profile" "default:+1.6" "expectations"]
+  {"test-all"   ["with-profile" "default:+1.6:+1.7" "expectations"]
    "test-auto"  ["with-profile" "+test" "autoexpect"]
-   ;; "build-once" ["do" "cljx" "once," "cljsbuild" "once"] ; cljx
-   ;; "deploy-lib" ["do" "build-once," "deploy" "clojars," "install"] ; cljx
-   "deploy-lib" ["do" "deploy" "clojars," "install"]
-   "start-dev"  ["with-profile" "+dev*" "repl" ":headless"]}
+   "deploy-lib" ["do" "build-once," "deploy" "clojars," "install"]
+   "start-dev"  ["with-profile" "+server-jvm" "repl" ":headless"]}
 
-  :repositories
-  {"sonatype"
-   {:url "http://oss.sonatype.org/content/repositories/releases"
-    :snapshots false
-    :releases {:checksum :fail}}
-   "sonatype-snapshots"
-   {:url "http://oss.sonatype.org/content/repositories/snapshots"
-    :snapshots true
-    :releases {:checksum :fail :update :always}}})
+  :repositories {"sonatype-oss-public"
+                 "https://oss.sonatype.org/content/groups/public/"})

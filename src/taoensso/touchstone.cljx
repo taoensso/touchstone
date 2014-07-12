@@ -1,6 +1,6 @@
 (ns taoensso.touchstone
-  "Simple, Carmine-backed Multi-Armed Bandit (MAB) split-testing. Both more
-  effective and more convenient than traditional A/B testing. Fire-and-forget!
+  "Simple, Carmine-backed Multi-Armed Bandit (MAB) split-testing. More
+  effective+convenient than traditional A/B testing.
 
   Redis keys:
     * touchstone:<test-id>:nprospects -> hash, {form-id count}
@@ -8,43 +8,54 @@
     * touchstone:<test-id>:<ts-id>:selection  -> ttl string, form-id
     * touchstone:<test-id>:<ts-id>:committed? -> ttl flag
 
-  Ref. http://goo.gl/XPlP6 (UCB1 MAB algo)
-       http://en.wikipedia.org/wiki/Multi-armed_bandit
-       http://stevehanov.ca/blog/index.php?id=132"
+  General strategy, Ref.
+    http://goo.gl/XPlP6 (UCB1 MAB algo)
+    http://en.wikipedia.org/wiki/Multi-armed_bandit
+    http://stevehanov.ca/blog/index.php?id=132"
   {:author "Peter Taoussanis"}
   (:require [clojure.string             :as str]
             [clojure.math.combinatorics :as combo]
-            [taoensso.encore            :as encore]
-            [taoensso.carmine           :as car :refer (wcar)]
-            [taoensso.touchstone.utils  :as utils]))
+            [taoensso.encore            :as enc :refer (have have-in)]
+            [taoensso.carmine           :as car :refer (wcar)]))
 
-;; TODO `conn`->`conn-opts` for consistency with Carmine v3
+;;;; Encore version check
+
+#+clj
+(let [min-encore-version 1.21] ; Let's get folks on newer versions here
+  (if-let [assert! (ns-resolve 'taoensso.encore 'assert-min-encore-version)]
+    (assert! min-encore-version)
+    (throw
+      (ex-info
+        (format
+          "Insufficient com.taoensso/encore version (< %s). You may have a Leiningen dependency conflict (see http://goo.gl/qBbLvC for solution)."
+          min-encore-version)
+        {:min-version min-encore-version}))))
 
 ;;;; Bindings, etc.
 
-(def ^:dynamic *ts-id* "Test subject id" nil)
-(defmacro with-test-subject
-  "Executes body within the context of thread-local test-subject-id binding."
-  [id & body] `(binding [*ts-id* ~id] ~@body))
-
 (def ^:private tkey (memoize (partial car/key :touchstone)))
+(def ^:dynamic *ts-id* "Test subject id" nil)
+(defmacro with-test-subject [id & body] `(binding [*ts-id* ~id] ~@body))
 
 ;;;; Low-level form selection
 
 (defn- select-form!*
-  [{:keys [conn ttl-ms non-uniques?] :or {ttl-ms (* 1000 60 60 2)} :as config}
+  [{:keys [conn-opts ttl-ms non-uniques?]
+    :or   {ttl-ms (enc/ms :hours 2)}
+    :as   config}
    strategy-fn ts-id test-id form-fns-map]
-  (let [valid-form?  (fn [form-id] (and form-id (contains? form-fns-map form-id)))
-        get-form     (fn [form-id] ((get form-fns-map form-id)))
-        leading-form (delay (strategy-fn config test-id (keys form-fns-map)))]
+  (let [valid-form?   (fn [form-id] (and form-id (contains? form-fns-map form-id)))
+        get-form      (fn [form-id] ((get form-fns-map form-id)))
+        leading-form_ (delay (strategy-fn config test-id (keys form-fns-map)))]
 
-    (if-not ts-id (get-form @leading-form) ; Return leading form and do nothing else
+    (if-not ts-id
+      (get-form @leading-form_) ; Return leading form and do nothing else
       (let [selection-tkey         (tkey test-id ts-id :selection)
-            prior-selected-form-id (keyword (wcar conn (car/get selection-tkey)))
+            prior-selected-form-id (keyword (wcar conn-opts (car/get selection-tkey)))
             select-and-return-form!
             (fn [form-id]
               (let [form (get-form form-id)]
-                (wcar conn
+                (wcar conn-opts
                  ;;; Refresh test-session ttl
                  (car/psetex selection-tkey ttl-ms form-id)
                  (car/pexpire (tkey test-id ts-id :committed?) ttl-ms)
@@ -58,7 +69,7 @@
         ;; (for consistent user experience); otherwise select leading form
         (if (valid-form? prior-selected-form-id)
           (select-and-return-form! prior-selected-form-id)
-          (select-and-return-form! @leading-form))))))
+          (select-and-return-form! @leading-form_))))))
 
 (defmacro select-form! "Implementation detail."
   [config strategy-fn ts-id test-id id-form-pairs]
@@ -74,8 +85,8 @@
         :my-form-1 (mab-select {} *ts-id* :my-test-1a ...)
         :my-form-2 (mab-select {} *ts-id* :my-test-1b ...)
         nil)"
-  [{:keys [conn]} ts-id test-id]
-  (keyword (wcar conn (car/get (tkey test-id ts-id :selection)))))
+  [{:keys [conn-opts]} ts-id test-id]
+  (keyword (wcar conn-opts (car/get (tkey test-id ts-id :selection)))))
 
 ;;;; Selection strategies
 
@@ -84,10 +95,14 @@
 
 (def ^:private low-n-select
   "Returns id of a form with lowest number of prospects (possibly zero)."
-  (encore/memoize* 5000
-    (fn [{:keys [conn]} test-id form-ids]
-      (let [nprospects-map (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords))]
-        (first (sort-by #(car/as-long (get nprospects-map % 0)) form-ids))))))
+  (enc/memoize* (enc/ms :secs 5)
+    (fn [{:keys [conn-opts]} test-id form-ids]
+      (let [nprospects-map ; {<test-id> <nprospects>}
+            (wcar conn-opts
+              (-> (car/hgetall (tkey test-id :nprospects))
+                  (car/parse-map :keywordize (fn [_ v] (enc/as-?int v)))))]
+        ;; `top` would be O(N.log1) vs O(N.logN) but N is usu. small here:
+        (first (sort-by #(get nprospects-map % 0) form-ids))))))
 
 (defn- ucb1-score* [N n score]
   (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
@@ -107,14 +122,15 @@
   confidence in the superiority of the leading form. This implies confidence in
   both relevant sample sizes, as well as the statistical significance of the
   difference between observed form scores."
-  [{:keys [conn]} test-id form-id]
-  (let [[nprospects-map score]
-        (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords)
-                   (car/hget     (tkey test-id :scores) form-id))
-
-        score       (or (car/as-double score) 0)
-        nprospects  (car/as-long (get nprospects-map form-id 0))
-        nprosps-sum (reduce + (map car/as-long (vals nprospects-map)))]
+  [{:keys [conn-opts]} test-id form-id]
+  (let [[score nprospects-map]
+        (wcar conn-opts
+          (car/hget        (tkey test-id :scores) form-id)
+          (-> (car/hgetall (tkey test-id :nprospects))
+              (car/parse-map :keywordize (fn [_ v] (enc/as-?int v)))))
+        score       (or (enc/as-?float score) 0)
+        nprospects  (have (enc/as-?int (get nprospects-map form-id 0)))
+        nprosps-sum (reduce + (vals nprospects-map))]
     (ucb1-score* nprosps-sum nprospects score)))
 
 (comment
@@ -131,9 +147,9 @@
 
 (def ^:private ucb1-select
   "Returns id of a given form with highest current \"UCB1\" score."
-  (encore/memoize* 5000 ; 5s cache for performance
-   (fn [config test-id form-ids]
-     (last (sort-by #(ucb1-score config test-id %) form-ids)))))
+  (enc/memoize* (enc/ms :secs 5)
+    (fn [config test-id form-ids]
+      (first (sort-by #(ucb1-score config test-id %) enc/rcompare form-ids)))))
 
 ;;;; Commits
 
@@ -154,14 +170,17 @@
 
   The statistics can get complicated so try keep things simple: resist the urge
   to get fancy with the spices."
-  ([{:keys [conn ttl-ms non-uniques?] :or {ttl-ms (* 1000 60 60 2)} :as config}
-    ts-id test-id value] {:pre [(>= value -1) (<= value 1)]}
-    (when ts-id
-      (let [committed?-tkey (tkey test-id ts-id :committed?)]
-        (when (or non-uniques?
-                  (not (car/as-bool (wcar conn (car/exists committed?-tkey)))))
-          (when-let [selected-form-id (selected-form-id config ts-id test-id)]
-            (wcar conn
+  ([{:keys [conn-opts ttl-ms non-uniques?]
+     :or   {ttl-ms (enc/ms :hours 2)}
+     :as   config}
+    ts-id test-id value]
+   {:pre [(>= value -1) (<= value 1)]}
+   (when ts-id
+     (let [committed?-tkey (tkey test-id ts-id :committed?)]
+       (when (or non-uniques?
+                 (= (wcar conn-opts (car/exists committed?-tkey)) 0))
+         (when-let [selected-form-id (selected-form-id config ts-id test-id)]
+           (wcar conn-opts
              ;; Count commit value toward score
              (car/hincrbyfloat (tkey test-id :scores) selected-form-id value)
 
@@ -169,33 +188,42 @@
              (car/psetex committed?-tkey ttl-ms 1)))))))
 
   ([config ts-id test-id value & id-value-pairs]
-     (doseq [[id v] (partition 2 (into [test-id value] id-value-pairs))]
-       (commit! config ts-id id v))))
+   (doseq [[id v] (partition 2 (into [test-id value] id-value-pairs))]
+     (commit! config ts-id id v))))
 
 ;;;; Reporting
 
-(defn pr-results
-  ([{:keys [conn] :as config} test-id]
-     (let [[nprospects-map scores-map]
-           (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords)
-                      (car/hgetall* (tkey test-id :scores)     :keywords))
-           nprosps-sum (reduce + (map car/as-long   (vals nprospects-map)))
-           scores-sum  (reduce + (map car/as-double (vals scores-map)))
-           round       encore/round2
-           output
-           (str "\nTouchstone " test-id " results\n"
-                "-----------------------\n"
-                "Total prospects: " nprosps-sum ", score: " (round scores-sum)
-                "\n[form-id ucb1-score [nprospects score]]:\n"
-                (->> (for [form-id (keys nprospects-map)]
-                       [(keyword form-id)
-                        (round (ucb1-score config test-id form-id))
-                        [(car/as-long          (nprospects-map form-id 0))
-                         (round (car/as-double (scores-map     form-id 0)))]])
-                     (sort-by second) (reverse) (vec)) "\n")]
+(defn print-results
+  ([{:keys [conn-opts] :as config} test-id]
+   (let [[nprospects-map scores-map]
+         (wcar conn-opts
+           (-> (car/hgetall (tkey test-id :nprospects))
+               (car/parse-map :keywordize (fn [_ v] (enc/as-?int v))))
+           (-> (car/hgetall (tkey test-id :scores))
+               (car/parse-map :keywordize (fn [_ v] (enc/as-?float v)))))
 
-       (println output)))
-  ([config test-id & more] (doseq [n (cons test-id more)] (pr-results config n))))
+         nprosps-sum (reduce + (vals nprospects-map))
+         scores-sum  (reduce + (vals scores-map))
+         output
+         (format "Touchstone %s results
+---
+Total prospects: %s, score: %s
+[form-id ucb1-score [nprospects score]]:
+%s
+
+"
+           test-id nprosps-sum (enc/round2 scores-sum)
+           (->> (for [form-id (keys nprospects-map)]
+                  [(keyword form-id)
+                   (enc/round2 (ucb1-score config test-id form-id))
+                   [            (enc/as-?int   (nprospects-map form-id 0))
+                    (enc/round2 (enc/as-?float (scores-map     form-id 0)))]])
+             (sort-by second enc/rcompare) (vec)))]
+     (println output)))
+
+  ([config test-id & more]
+   (doseq [n (cons test-id more)]
+     (print-results config n))))
 
 ;;;; Selection wrappers
 
@@ -246,7 +274,7 @@
   (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
     (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
   (let [take-n (if-not take-n identity
-                       (partial encore/distinct-by (partial take take-n)))
+                       (partial enc/distinct-by (partial take take-n)))
 
         permutations (map vec (take-n (combo/permutations ordered-forms)))
         ids          (map #(keyword (str "form-" (str/join "-" %)))
@@ -259,11 +287,10 @@
 ;;;; Tests, etc.
 
 (comment
-  (wcar {} (car/hgetall* (tkey :touchstone1 :nprospects) :keywords)
-           (car/hgetall* (tkey :touchstone2 :scores)     :keywords))
+  (wcar {} (car/hgetall (tkey :touchstone1 :nprospects))
+           (car/hgetall (tkey :touchstone2 :scores)))
 
-  (pr-results {} :touchstone1 :touchstone2)
-
+  (print-results {} :touchstone1 :touchstone2)
   (mab-select {} 147 :touchstone1
     :red    "Red"
     :blue   "Blue"
@@ -281,20 +308,60 @@
 
 ;;;; Admin
 
-(defn- test-tkeys [{:keys [conn]} test-id]
-  (when test-id (wcar conn (car/keys (tkey test-id :*)))))
+(defn- test-tkeys [{:keys [conn-opts] :as config} test-id]
+  (when test-id (wcar conn-opts (car/keys (tkey test-id :*)))))
 
-(defn delete-test [{:keys [conn]} test-id]
-  (when-let [tkeys (seq (test-tkeys test-id))]
-    (wcar conn (apply car/del tkeys))))
+(defn delete-test [{:keys [conn-opts] :as config} test-id]
+  (when-let [tkeys (seq (test-tkeys config test-id))]
+    (wcar conn-opts (apply car/del tkeys))))
 
-(defn move-test [{:keys [conn]} old-id new-id]
-  (when-let [old-tkeys (seq (test-tkeys old-id))]
+(defn move-test [{:keys [conn-opts] :as config} old-id new-id]
+  (when-let [old-tkeys (seq (test-tkeys config old-id))]
     (let [new-tkeys (mapv #(str/replace % (re-pattern (str "^" (tkey old-id)))
-                                        (tkey new-id)) old-tkeys)]
-      (wcar conn (mapv car/renamenx old-tkeys new-tkeys)))))
+                             (tkey new-id)) old-tkeys)]
+      (wcar conn-opts (mapv car/renamenx old-tkeys new-tkeys)))))
 
-(comment (test-tkeys  {} :touchstone1)
-         (delete-test {} :touchstone1)
-         (move-test   {} :touchstone1  :touchstone1b)
-         (move-test   {} :touchstone1b :touchstone1))
+(comment
+  (test-tkeys  {} :touchstone1)
+  (delete-test {} :touchstone1)
+  (move-test   {} :touchstone1  :touchstone1b)
+  (move-test   {} :touchstone1b :touchstone1))
+
+;;;; Ring middleware
+
+(defn bot-user-agent? "Simple test for honest bots."
+  [ring-request-headers]
+  (->> (get ring-request-headers "user-agent" "")
+       (str/lower-case)
+       (re-find
+         #"(agent|bing|bot|crawl|curl|facebook|google|index|slurp|spider|teoma|wget)")
+       first))
+
+(comment (bot-user-agent? {"user-agent" "GoogleBot"}))
+
+(defn ring-wrap-test-subject-id
+  "Ring middleware that generates, sessionizes, and binds a test-subject id for
+  requests eligible for split-testing (by default this excludes clients that
+  report themselves as bots)."
+  [ring-handler & [wrap-pred]]
+  (let [wrap-pred (if-not wrap-pred
+                    (fn [req] (not (bot-user-agent? (:headers req))))
+                    wrap-pred)]
+
+    (fn [ring-req]
+      (if-not (wrap-pred ring-req)
+        (ring-handler ring-req)
+
+        (if-let [ts-id-entry (find (:session ring-req) :ts-id)] ; May be nil
+          (let [sessionized-id (val ts-id-entry)]
+            (with-test-subject sessionized-id
+              (ring-handler (assoc ring-req :ts-id sessionized-id))))
+
+          (let [new-id   (rand-int Integer/MAX_VALUE)
+                response (with-test-subject new-id
+                           (ring-handler (assoc ring-req :ts-id new-id)))]
+            (enc/session-swap ring-req response assoc :ts-id new-id)))))))
+
+;;;; Client (ClojureScript)
+
+;; TODO

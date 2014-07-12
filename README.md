@@ -4,7 +4,8 @@
 **[CHANGELOG]** | [API] | current [Break Version]:
 
 ```clojure
-[com.taoensso/touchstone "2.0.2"] ; Stable
+[com.taoensso/touchstone "2.0.2"]     ; Stable
+[com.taoensso/touchstone "3.0.0-RC1"] ; Please see CHANGELOG
 ```
 
 # Touchstone
