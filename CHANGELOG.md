@@ -1,3 +1,5 @@
+> This project uses [Break Versioning](https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSIONING.md) as of **Aug 16, 2014**.
+
 ## v2.0.2 / 2014 Mar 8
 
 > This is a minor, housekeeping update. Bumps some dependencies, etc.

@@ -1,6 +1,6 @@
 (defproject com.taoensso/touchstone "2.0.2"
   :author "Peter Taoussanis <https://www.taoensso.com>"
-  :description "Clojure A/B testing library"
+  :description "Split testing library for Clojure"
   :url "https://github.com/ptaoussanis/touchstone"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"
