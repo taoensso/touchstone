@@ -10,46 +10,39 @@
   :global-vars {*warn-on-reflection* true
                 *assert* true}
   :dependencies
-  [[org.clojure/clojure            "1.4.0"]
-   [com.taoensso/encore            "0.9.7"]
-   [com.taoensso/carmine           "2.4.6"]
+  [[org.clojure/clojure            "1.5.1"]
+   [com.taoensso/encore            "2.68.0"]
+   [com.taoensso/carmine           "2.14.0"]
    [org.clojure/math.combinatorics "0.0.7"]]
 
-  :test-paths ["test" "src"]
+  :plugins
+  [[lein-pprint  "1.1.2"]
+   [lein-ancient "0.6.10"]
+   [lein-codox   "0.9.5"]]
+
   :profiles
   {;; :default [:base :system :user :provided :dev]
+   :server-jvm {:jvm-opts ^:replace ["-server"]}
    :1.5  {:dependencies [[org.clojure/clojure "1.5.1"]]}
-   :1.6  {:dependencies [[org.clojure/clojure "1.6.0-beta1"]]}
-   :test {:dependencies [[expectations            "1.4.56"]
-                         [org.clojure/test.check  "0.5.7"]
-                         [ring/ring-core          "1.2.1"]]
-          :plugins [[lein-expectations "0.0.8"]
-                    [lein-autoexpect   "1.2.2"]]}
-   :dev* [:dev {:jvm-opts ^:replace ["-server"]
-                ;; :hooks [cljx.hooks leiningen.cljsbuild] ; cljx
-                }]
+   :1.6  {:dependencies [[org.clojure/clojure "1.6.0"]]}
+   :1.7  {:dependencies [[org.clojure/clojure "1.7.0"]]}
+   :1.8  {:dependencies [[org.clojure/clojure "1.8.0"]]}
+   :1.9  {:dependencies [[org.clojure/clojure "1.9.0-alpha10"]]}
+   :test {:dependencies [[org.clojure/test.check  "0.9.0"]
+                         [ring/ring-core          "1.5.0"]]}
    :dev
-   [:1.6 :test
-    {:dependencies []
-     :plugins [[lein-ancient "0.5.4"]
-               [codox        "0.6.7"]]}]}
+   [:1.9 :test :server-jvm]}
 
-  ;; :codox {:sources ["target/classes"]} ; cljx
+  :test-paths ["test" "src"]
+
+  :codox
+  {:language :clojure
+   :source-uri "https://github.com/ptaoussanis/carmine/blob/master/{filepath}#L{line}"}
+
   :aliases
-  {"test-all"   ["with-profile" "default:+1.5:+1.6" "expectations"]
-   ;; "test-all"   ["with-profile" "default:+1.6" "expectations"]
-   "test-auto"  ["with-profile" "+test" "autoexpect"]
-   ;; "build-once" ["do" "cljx" "once," "cljsbuild" "once"] ; cljx
-   ;; "deploy-lib" ["do" "build-once," "deploy" "clojars," "install"] ; cljx
+  {"test-all"   ["with-profile" "+1.9:+1.8:+1.7:+1.6:+1.5" "test"]
    "deploy-lib" ["do" "deploy" "clojars," "install"]
-   "start-dev"  ["with-profile" "+dev*" "repl" ":headless"]}
+   "start-dev"  ["with-profile" "+dev" "repl" ":headless"]}
 
-  :repositories
-  {"sonatype"
-   {:url "http://oss.sonatype.org/content/repositories/releases"
-    :snapshots false
-    :releases {:checksum :fail}}
-   "sonatype-snapshots"
-   {:url "http://oss.sonatype.org/content/repositories/snapshots"
-    :snapshots true
-    :releases {:checksum :fail :update :always}}})
+  :repositories {"sonatype-oss-public"
+                 "https://oss.sonatype.org/content/groups/public/"})

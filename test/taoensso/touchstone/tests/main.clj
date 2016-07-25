@@ -1,5 +1,5 @@
 (ns taoensso.touchstone.tests.main
-  (:require [expectations        :as test       :refer :all]
+  (:require ;[expectations        :as test       :refer :all]
             [taoensso.touchstone :as touchstone :refer ()]))
 
 (comment (test/run-tests '[taoensso.touchstone.tests.main]))
@@ -7,4 +7,4 @@
 (defn- before-run {:expectations-options :before-run} [])
 (defn- after-run  {:expectations-options :after-run}  [])
 
-(expect true) ; TODO Add tests (PRs welcome!)
+; (expect true) ; TODO Add tests (PRs welcome!)
