@@ -1,4 +1,4 @@
-(defproject com.taoensso/touchstone "2.0.2"
+(defproject com.taoensso/touchstone "2.1.0"
   :author "Peter Taoussanis <https://www.taoensso.com>"
   :description "Split testing library for Clojure"
   :url "https://github.com/ptaoussanis/touchstone"
