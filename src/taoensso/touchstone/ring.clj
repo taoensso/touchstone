@@ -2,7 +2,7 @@
   "Touchstone middleware for Ring."
   {:author "Peter Taoussanis"}
   (:require [clojure.string      :as str]
-            [taoensso.encore     :as encore]
+            [taoensso.encore     :as enc]
             [taoensso.touchstone :as touchstone]))
 
 (defn bot-user-agent? "Simple test for honest bots."
@@ -32,4 +32,4 @@
         (let [new-id   (rand-int 2147483647)
               response (touchstone/with-test-subject new-id
                          (handler (assoc request :ts-id new-id)))]
-          (encore/session-swap request response assoc :ts-id new-id))))))
+          (enc/session-swap request response assoc :ts-id new-id))))))

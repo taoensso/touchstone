@@ -14,9 +14,13 @@
   {:author "Peter Taoussanis"}
   (:require [clojure.string             :as str]
             [clojure.math.combinatorics :as combo]
-            [taoensso.encore            :as encore]
+            [taoensso.encore            :as enc]
             [taoensso.carmine           :as car :refer (wcar)]
             [taoensso.touchstone.utils  :as utils]))
+
+(if (vector? enc/encore-version)
+  (enc/assert-min-encore-version [2 67 2])
+  (enc/assert-min-encore-version  2.67))
 
 ;; TODO `conn`->`conn-opts` for consistency with Carmine v3
 
@@ -79,15 +83,20 @@
 
 ;;;; Selection strategies
 
+(defn- kvs->kw-map [kvs] (enc/reduce-kvs (fn [m k v] (assoc m (keyword k) v)) {} kvs))
+(defn- hgetall*-kw [k] (car/parse kvs->kw-map (car/hgetall k)))
+
+(comment (kvs->kw-map ["a" "A" "b" "B"]))
+
 (defn- random-select "Simple A/B-style random selection."
   [_ test-id form-ids] (rand-nth form-ids))
 
 (def ^:private low-n-select
   "Returns id of a form with lowest number of prospects (possibly zero)."
-  (encore/memoize* 5000
+  (enc/memoize* 5000
     (fn [{:keys [conn]} test-id form-ids]
-      (let [nprospects-map (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords))]
-        (first (sort-by #(car/as-long (get nprospects-map % 0)) form-ids))))))
+      (let [nprospects-map (wcar conn (hgetall*-kw (tkey test-id :nprospects)))]
+        (first (sort-by #(car/as-int (get nprospects-map % 0)) form-ids))))))
 
 (defn- ucb1-score* [N n score]
   (+ (/ score (max n 1)) (Math/sqrt (/ (* 2 (Math/log N)) (max n 1)))))
@@ -109,12 +118,12 @@
   difference between observed form scores."
   [{:keys [conn]} test-id form-id]
   (let [[nprospects-map score]
-        (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords)
+        (wcar conn (hgetall*-kw  (tkey test-id :nprospects))
                    (car/hget     (tkey test-id :scores) form-id))
 
-        score       (or (car/as-double score) 0)
-        nprospects  (car/as-long (get nprospects-map form-id 0))
-        nprosps-sum (reduce + (map car/as-long (vals nprospects-map)))]
+        score       (or (car/as-float score) 0)
+        nprospects  (car/as-int (get nprospects-map form-id 0))
+        nprosps-sum (reduce + (map car/as-int (vals nprospects-map)))]
     (ucb1-score* nprosps-sum nprospects score)))
 
 (comment
@@ -131,7 +140,7 @@
 
 (def ^:private ucb1-select
   "Returns id of a given form with highest current \"UCB1\" score."
-  (encore/memoize* 5000 ; 5s cache for performance
+  (enc/memoize* 5000 ; 5s cache for performance
    (fn [config test-id form-ids]
      (last (sort-by #(ucb1-score config test-id %) form-ids)))))
 
@@ -177,11 +186,11 @@
 (defn pr-results
   ([{:keys [conn] :as config} test-id]
      (let [[nprospects-map scores-map]
-           (wcar conn (car/hgetall* (tkey test-id :nprospects) :keywords)
-                      (car/hgetall* (tkey test-id :scores)     :keywords))
-           nprosps-sum (reduce + (map car/as-long   (vals nprospects-map)))
-           scores-sum  (reduce + (map car/as-double (vals scores-map)))
-           round       encore/round2
+           (wcar conn (hgetall*-kw (tkey test-id :nprospects))
+                      (hgetall*-kw (tkey test-id :scores)))
+           nprosps-sum (reduce + (map car/as-int   (vals nprospects-map)))
+           scores-sum  (reduce + (map car/as-float (vals scores-map)))
+           round       enc/round2
            output
            (str "\nTouchstone " test-id " results\n"
                 "-----------------------\n"
@@ -190,8 +199,8 @@
                 (->> (for [form-id (keys nprospects-map)]
                        [(keyword form-id)
                         (round (ucb1-score config test-id form-id))
-                        [(car/as-long          (nprospects-map form-id 0))
-                         (round (car/as-double (scores-map     form-id 0)))]])
+                        [(car/as-int          (nprospects-map form-id 0))
+                         (round (car/as-float (scores-map     form-id 0)))]])
                      (sort-by second) (reverse) (vec)) "\n")]
 
        (println output)))
@@ -235,6 +244,18 @@
         pairs (interleave ids ordered-forms)]
     `(mab-select ~config ~ts-id ~test-id ~@pairs)))
 
+(defn- distinct-by [keyfn coll]
+    (let [step (fn step [xs seen]
+                 (lazy-seq
+                   ((fn [[v :as xs] seen]
+                      (when-let [s (seq xs)]
+                        (let [v* (keyfn v)]
+                          (if (contains? seen v*)
+                            (recur (rest s) seen)
+                            (cons v (step (rest s) (conj seen v*)))))))
+                    xs seen)))]
+      (step coll #{})))
+
 (defmacro mab-select-permutations
   "Advanced. Defines a positional test with N!/(N-n)! testing forms. Each
   testing form will be a vector permutation of the given `ordered-forms`,
@@ -246,7 +267,7 @@
   (let [N (count ordered-forms) n take-n] ; O(n!) kills puppies
     (assert (<= (reduce * (range (inc (- N n)) (inc N))) 24)))
   (let [take-n (if-not take-n identity
-                       (partial encore/distinct-by (partial take take-n)))
+                       (partial distinct-by (partial take take-n)))
 
         permutations (map vec (take-n (combo/permutations ordered-forms)))
         ids          (map #(keyword (str "form-" (str/join "-" %)))
@@ -259,8 +280,8 @@
 ;;;; Tests, etc.
 
 (comment
-  (wcar {} (car/hgetall* (tkey :touchstone1 :nprospects) :keywords)
-           (car/hgetall* (tkey :touchstone2 :scores)     :keywords))
+  (wcar {} (hgetall*-kw (tkey :touchstone1 :nprospects))
+           (hgetall*-kw (tkey :touchstone2 :scores)))
 
   (pr-results {} :touchstone1 :touchstone2)
 
