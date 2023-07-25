@@ -18,9 +18,7 @@
             [taoensso.carmine           :as car :refer (wcar)]
             [taoensso.touchstone.utils  :as utils]))
 
-(if (vector? enc/encore-version)
-  (enc/assert-min-encore-version [2 67 2])
-  (enc/assert-min-encore-version  2.67))
+(enc/assert-min-encore-version [3 31 0])
 
 ;; TODO `conn`->`conn-opts` for consistency with Carmine v3
 

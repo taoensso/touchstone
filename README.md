@@ -1,25 +1,21 @@
 <a href="https://www.taoensso.com" title="More stuff by @ptaoussanis at www.taoensso.com">
-<img src="https://www.taoensso.com/taoensso-open-source.png" alt="Taoensso open-source" width="400"/></a>
+<img src="https://www.taoensso.com/taoensso-open-source.png" alt="Taoensso open-source" width="350"/></a>
 
-**[CHANGELOG]** | [API] | current [Break Version]:
+**[CHANGELOG][]** | [API][] | current [Break Version][]:
 
 ```clojure
-[com.taoensso/touchstone "2.0.2"] ; Stable
+[com.taoensso/touchstone "2.0.2"] ; Mature/stable (basically "done")
 ```
 
-> Please consider helping to [support my continued open-source Clojure/Script work]? 
-> 
-> Even small contributions can add up + make a big difference to help sustain my time writing, maintaining, and supporting Touchstone and other Clojure/Script libraries. **Thank you!**
->
-> \- Peter Taoussanis
+> See [here][backers] if to help support my open-source work, thanks! - [Peter Taoussanis][Taoensso.com]
 
 # Touchstone
 
-## Split testing library for Clojure
+### Simple A/B testing library for Clojure
 
-[A/B testing] is great for **conversion optimization**. We should all be doing more of it. But traditional A/B tests can be a nuisance to setup and monitor.
+[A/B testing][] is great for **conversion optimization**. We should all be doing more of it. But traditional A/B tests can be a nuisance to setup and monitor.
 
-Touchstone is an attempt to bring **dead-simple, high-power split-testing** to any Clojure web application. It uses [multi-armed bandit] techniques to provide **fast, accurate, low-maintenance** conversion optimization. The API is simple and *highly flexible*.
+Touchstone is an attempt to bring **dead-simple, high-power split-testing** to any Clojure web application. It uses [multi-armed bandit][] techniques to provide **fast, accurate, low-maintenance** conversion optimization. The API is simple and *highly flexible*.
 
 ## Library status
 
@@ -27,11 +23,11 @@ Touchstone is an attempt to bring **dead-simple, high-power split-testing** to a
 
 Haven't updated the lib in forever, but it's **stable and works well in production**. Do have some new stuff planned for a future update (particularly docs re: use with modern Cljs applications), but no ETA on that yet.
 
-\- [Peter Taoussanis]
+\- [Peter Taoussanis][Taoensso.com]
 
 ## Features
  * Tiny, **simple API**
- * **Great performance** backed by Redis+[Carmine]
+ * **Great performance** backed by Redis and [Carmine][]
  * **High flexibility** (variations are *arbitrary Clojure forms*)
  * **Low maintenace** (fire-and-forget, automatic-selection algorithm)
  * Fire-and-forget **multivariate** testing
@@ -43,7 +39,8 @@ Haven't updated the lib in forever, but it's **stable and works well in producti
 Add the necessary dependency to your project:
 
 ```clojure
-[com.taoensso/touchstone "2.0.2"]
+Leiningen: [com.taoensso/touchstone "2.0.2"] ; or
+deps.edn:   com.taoensso/touchstone {:mvn/version "2.0.2"}
 ```
 
 And setup your namespace imports:
@@ -95,38 +92,35 @@ Touchstone will now **automatically** start using accumulated statistical data t
 
 And you're done! That's literally all there is to it.
 
-See the `mab-select` and `mab-commit!` [API] docs for info on more advanced capabilities like **multivariate testing, test composition (dependent tests), arbitrary scoring, engagement testing**, etc.
+See the `mab-select` and `mab-commit!` [API][] docs for info on more advanced capabilities like **multivariate testing, test composition (dependent tests), arbitrary scoring, engagement testing**, etc.
 
 ## Contacting me / contributions
 
-Please use the project's [GitHub issues page] for all questions, ideas, etc. **Pull requests welcome**. See the project's [GitHub contributors page] for a list of contributors.
+Please use the project's [GitHub issues page][] for all questions, ideas, etc. **Pull requests welcome**. See the project's [GitHub contributors page][] for a list of contributors.
 
-Otherwise, you can reach me at [Taoensso.com]. Happy hacking!
+Otherwise, you can reach me at [Taoensso.com][]. Happy hacking!
 
-\- [Peter Taoussanis]
+\- [Peter Taoussanis][Taoensso.com]
 
 ## License
 
-Distributed under the [EPL v1.0] \(same as Clojure).  
-Copyright &copy; 2012-2016 [Peter Taoussanis].
+Distributed under the [EPL v1.0][] \(same as Clojure).  
+Copyright &copy; 2012-2022 [Peter Taoussanis][Taoensso.com].
 
 <!--- Standard links -->
 [Taoensso.com]: https://www.taoensso.com
-[Peter Taoussanis]: https://www.taoensso.com
-[@ptaoussanis]: https://www.taoensso.com
-[More by @ptaoussanis]: https://www.taoensso.com
-[Break Version]: https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSIONING.md
-[support my continued open-source Clojure/Script work]: http://taoensso.com/clojure/backers
+[Break Version]: https://github.com/taoensso/encore/blob/master/BREAK-VERSIONING.md
+[backers]: https://taoensso.com/clojure/backers
 
 <!--- Standard links (repo specific) -->
-[CHANGELOG]: https://github.com/ptaoussanis/touchstone/releases
-[API]: http://ptaoussanis.github.io/touchstone/
-[GitHub issues page]: https://github.com/ptaoussanis/touchstone/issues
-[GitHub contributors page]: https://github.com/ptaoussanis/touchstone/graphs/contributors
+[CHANGELOG]: https://github.com/taoensso/touchstone/releases
+[API]: http://taoensso.github.io/touchstone/
+[GitHub issues page]: https://github.com/taoensso/touchstone/issues
+[GitHub contributors page]: https://github.com/taoensso/touchstone/graphs/contributors
 [EPL v1.0]: https://raw.githubusercontent.com/ptaoussanis/touchstone/master/LICENSE
 [Hero]: https://raw.githubusercontent.com/ptaoussanis/touchstone/master/hero.png "Title"
 
 <!--- Unique links -->
 [A/B testing]: http://en.wikipedia.org/wiki/A/B_testing
 [multi-armed bandit]: http://en.wikipedia.org/wiki/Multi-armed_bandit
-[Carmine]: https://github.com/ptaoussanis/carmine
+[Carmine]: https://github.com/taoensso/carmine
